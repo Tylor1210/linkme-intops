@@ -56,7 +56,7 @@ export const RecallModal: React.FC<Props> = ({ ticket, currentUser, onClose, onR
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="modal-body flex flex-col gap-4">
             <div className="p-3 rounded-xl border text-sm" style={{ borderColor: 'rgba(139,92,246,0.2)', background: 'rgba(139,92,246,0.05)', color: 'var(--text-secondary)' }}>
               This will <strong style={{ color: 'var(--text-primary)' }}>fully reset</strong> this profile back to the Unclaimed Pool. Choose who should pick it up next.

@@ -60,7 +60,7 @@ export const RejectModal: React.FC<Props> = ({ ticket, currentUser, onClose, onR
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="modal-body flex flex-col gap-4">
 
             {/* Rejection Reason */}
