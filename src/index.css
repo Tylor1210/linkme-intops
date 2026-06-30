@@ -275,11 +275,10 @@
 
   /* === MODALS === */
   .modal-overlay {
-    @apply fixed inset-0 flex items-center justify-center z-50;
+    @apply fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-6;
     background-color: rgba(5,6,9,0.4);
     backdrop-filter: blur(10px);
     animation: fadeIn 0.2s ease-out;
-    padding: 1.5rem;
   }
   .dark .modal-overlay {
     background-color: rgba(5,6,9,0.85);
@@ -292,12 +291,12 @@
     max-height: 90vh;
   }
   .modal-header {
-    @apply flex items-center justify-between px-6 py-4 border-b flex-shrink-0;
+    @apply flex items-center justify-between px-4 sm:px-6 py-4 border-b flex-shrink-0;
     border-color: var(--border-color);
   }
-  .modal-body { @apply flex-1 overflow-y-auto px-6 py-5; }
+  .modal-body { @apply flex-1 overflow-y-auto px-4 sm:px-6 py-5; }
   .modal-footer {
-    @apply flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0;
+    @apply flex justify-end gap-3 px-4 sm:px-6 py-4 border-t flex-shrink-0;
     border-color: var(--border-color);
     background: rgba(120, 120, 120, 0.02);
   }

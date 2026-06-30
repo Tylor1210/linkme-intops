@@ -103,7 +103,7 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
             {/* Routing */}
             <div className="form-group mb-0">
               <label className="form-label">Routing</label>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <label className="flex items-center gap-2 cursor-pointer flex-1 p-3 rounded-xl border transition-all duration-150"
                   style={{
                     borderColor: routingType === 'all' ? 'rgba(255,0,127,0.3)' : 'var(--border-color)',
@@ -141,13 +141,13 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
             )}
 
             {/* High Priority Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-150"
+            <div className="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-150 gap-2"
               style={{
                 borderColor: isHighPriority ? 'rgba(239,68,68,0.4)' : 'var(--border-color)',
                 background: isHighPriority ? 'rgba(239,68,68,0.05)' : 'rgba(120,120,120,0.02)',
               }}
               onClick={() => setIsHighPriority(v => !v)}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Zap size={14} style={{ color: isHighPriority ? 'var(--accent-coral)' : 'var(--text-muted)' }} />
                 <span className="text-sm font-medium" style={{ color: isHighPriority ? 'var(--accent-coral)' : 'var(--text-secondary)' }}>
                   Flag as High Priority
