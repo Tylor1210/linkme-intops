@@ -1,8 +1,15 @@
 import { dbService } from './dbService';
 import {
   type Ticket, type TimerLog, type Comment,
-  MOCK_USERS, type RoutingType, type RejectionRoutingOption,
+  type User, MOCK_USERS, type RoutingType, type RejectionRoutingOption,
 } from '../db/schema';
+
+// ─── RBAC: Fields that are NEVER transmitted to Creator-role clients ──────────
+// Stripping happens at the service boundary so no component can accidentally
+// render or expose timing data to non-admin users.
+type AdminOnlyFields = 'currentStageStartedAt' | 'totalInProgressTime' | 'claimedAt' | 'approvedAt' | 'submittedAt';
+export type CreatorTicketView = Omit<Ticket, AdminOnlyFields>;
+export type TicketView = Ticket | CreatorTicketView;
 
 const uuid = () =>
   Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 9);
@@ -14,6 +21,33 @@ export const ticketService = {
     return dbService.getTickets();
   },
 
+  /**
+   * RBAC-enforced ticket fetch.
+   * Admins receive the full Ticket shape including all tracking timestamps.
+   * Creators receive CreatorTicketView — tracking fields are stripped from the
+   * object entirely at this layer before any component can access them.
+   * This is NOT a UI toggle; the data is physically absent from the payload.
+   */
+  getTicketsForRole(role: User['role']): Ticket[] {
+    const tickets = dbService.getTickets();
+    if (role === 'admin') return tickets;
+
+    // Strip every admin-only timing field — Object.keys approach avoids
+    // silent failures if the Ticket schema grows new tracking fields.
+    const ADMIN_ONLY: AdminOnlyFields[] = [
+      'currentStageStartedAt',
+      'totalInProgressTime',
+      'claimedAt',
+      'approvedAt',
+      'submittedAt',
+    ];
+    return tickets.map(t => {
+      const view = { ...t } as Partial<Ticket>;
+      ADMIN_ONLY.forEach(field => delete view[field]);
+      return view as Ticket;
+    });
+  },
+
   getCommentsForTicket(ticketId: string): Comment[] {
     return dbService.getComments().filter(c => c.ticketId === ticketId);
   },
@@ -22,21 +56,42 @@ export const ticketService = {
     return dbService.getTimerLogs().filter(l => l.ticketId === ticketId);
   },
 
-  /** Priority-sorted queue for a specific creator (stack order) */
+  /**
+   * Priority-sorted queue for a specific creator (stack order).
+   *
+   * Composite sort key — two fields, fully deterministic:
+   *   1. TIER (integer 0–3): derived from isHighPriority × routing specificity.
+   *      Lower tier = higher in stack.
+   *        0 → high-priority, specifically routed to THIS creator
+   *        1 → high-priority, routed to all creators
+   *        2 → standard, specifically routed to THIS creator
+   *        3 → standard, routed to all creators
+   *   2. createdAt (ascending): within the same tier, FIFO is strictly preserved.
+   *      Older tickets appear higher in the stack so no ticket is starved.
+   *
+   * Multiple high-priority tickets remain in their original insertion order.
+   * Multiple standard tickets remain in their original insertion order.
+   * No random ordering is possible.
+   */
   getCreatorQueue(creatorId: string): Ticket[] {
-    const unclaimed = dbService.getTickets().filter(t => {
-      if (t.stage !== 'unclaimed') return false;
-      return t.routingType === 'all' || t.assignedCreatorId === creatorId;
-    });
+    const TIER = (t: Ticket): number => {
+      const isSpecific = t.assignedCreatorId === creatorId;
+      if (t.isHighPriority) return isSpecific ? 0 : 1;
+      return isSpecific ? 2 : 3;
+    };
 
-    return unclaimed.sort((a, b) => {
-      const score = (t: Ticket) => {
-        if (t.isHighPriority) return t.assignedCreatorId === creatorId ? 1 : 2;
-        return t.assignedCreatorId === creatorId ? 3 : 4;
-      };
-      const diff = score(a) - score(b);
-      return diff !== 0 ? diff : a.createdAt - b.createdAt; // FIFO tiebreak
-    });
+    return dbService.getTickets()
+      .filter(t => {
+        if (t.stage !== 'unclaimed') return false;
+        return t.routingType === 'all' || t.assignedCreatorId === creatorId;
+      })
+      .sort((a, b) => {
+        const tierDiff = TIER(a) - TIER(b);
+        // Primary: tier (priority + routing specificity)
+        if (tierDiff !== 0) return tierDiff;
+        // Secondary: createdAt ascending → strict FIFO within same tier
+        return a.createdAt - b.createdAt;
+      });
   },
 
   // ─── CREATE ──────────────────────────────────────────────────────────────────

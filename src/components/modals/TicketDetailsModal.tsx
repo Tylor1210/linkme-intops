@@ -30,11 +30,26 @@ export const TicketDetailsModal: React.FC<Props> = ({ ticketId, currentUser, onC
 
   useEffect(() => { load(); }, [ticketId]);
 
+  /**
+   * Live timer: only active when the ticket is in_progress.
+   * Dependency array is [ticket?.id, ticket?.stage] — NOT [ticket] — to prevent
+   * unnecessary interval teardown/recreation on every unrelated state update.
+   * The clearInterval in the return block is the required cleanup; removing it
+   * would cause the interval to outlive the component (memory leak).
+   */
   useEffect(() => {
     if (!ticket || ticket.stage !== 'in_progress') return;
-    const interval = setInterval(() => setLiveMetrics(ticketService.calculateLiveTime(ticket!)), 1000);
+    // Capture ticketId as a primitive to avoid stale closure on the full object
+    const ticketId = ticket.id;
+    const interval = setInterval(() => {
+      const current = ticketService.getTickets().find(t => t.id === ticketId);
+      if (current) setLiveMetrics(ticketService.calculateLiveTime(current));
+    }, 1000);
+    // REQUIRED: explicit cleanup — paired clearInterval prevents the interval
+    // from continuing to fire after the modal is closed or stage changes.
     return () => clearInterval(interval);
-  }, [ticket]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket?.id, ticket?.stage]);
 
   if (!ticket) return null;
 

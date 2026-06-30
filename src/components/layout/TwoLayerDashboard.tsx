@@ -39,9 +39,14 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
   const isAdmin = currentUser.role === 'admin';
   const isCreator = currentUser.role === 'creator';
 
+  /**
+   * RBAC boundary: always load via getTicketsForRole so the payload handed to
+   * child components is already stripped of admin-only timing fields when the
+   * current user is a Creator. Never call getTickets() directly from components.
+   */
   const loadTickets = useCallback(() => {
-    setTickets(ticketService.getTickets());
-  }, []);
+    setTickets(ticketService.getTicketsForRole(currentUser.role));
+  }, [currentUser.role]);
 
   useEffect(() => {
     loadTickets();
@@ -49,14 +54,26 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
 
   // ─── Derived data ──────────────────────────────────────────────────────────
 
+  /**
+   * Admin unclaimed sort — composite key mirrors the creator queue TIER logic:
+   *   1. Manual sortOrder (drag-and-drop override): lower wins.
+   *   2. isHighPriority tier: high-priority tickets lead standard ones.
+   *   3. createdAt ascending (FIFO): strict insertion-order tiebreak within tier.
+   * This guarantees deterministic ordering with no ambiguity.
+   */
   const unclaimedForAdmin = tickets
     .filter(t => t.stage === 'unclaimed')
     .sort((a, b) => {
-      const sa = a.sortOrder ?? Infinity;
-      const sb = b.sortOrder ?? Infinity;
+      // Layer 1: explicit drag-and-drop sortOrder
+      const sa = (a as Ticket).sortOrder ?? Infinity;
+      const sb = (b as Ticket).sortOrder ?? Infinity;
       if (sa !== sb) return sa - sb;
-      // Fallback: newest first (original default)
-      return b.createdAt - a.createdAt;
+      // Layer 2: priority tier (high-priority before standard)
+      const tierA = a.isHighPriority ? 0 : 1;
+      const tierB = b.isHighPriority ? 0 : 1;
+      if (tierA !== tierB) return tierA - tierB;
+      // Layer 3: FIFO — oldest created appears first
+      return a.createdAt - b.createdAt;
     });
 
   const creatorQueue = isCreator
