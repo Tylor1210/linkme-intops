@@ -14,9 +14,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- UNCLAIMED ---
   {
     id: 'ticket-1',
-    title: 'Update Instagram Creator Profile',
-    profileUrl: 'https://linkme.to/alex-rivera',
-    description: 'Refresh the layout for Instagram creator portfolios to support the new highlights grid and link-in-bio widgets. Update icons, typography, and spacing to match the new brand guidelines.',
+    title: 'Jake Thompson',
+    profileUrl: 'https://link.me/jakethompson',
+    description: 'Add Twitch and YouTube links.',
     stage: 'unclaimed',
     routingType: 'all',
     assignedCreatorId: null,
@@ -32,9 +32,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-2',
-    title: 'Verify Custom Domain DNS',
-    profileUrl: 'https://linkme.to/creator-seo-demo',
-    description: 'Configure the custom subdomain routing for the creator profile and verify SSL provisioning is active. Ensure proper canonical mapping is configured.',
+    title: 'Maya Patel',
+    profileUrl: 'https://link.me/mayapatel',
+    description: 'Update profile picture.',
     stage: 'unclaimed',
     routingType: 'specific',
     assignedCreatorId: 'creator-a',
@@ -50,9 +50,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-priority',
-    title: 'Fix Mobile Profile Rendering Bug',
-    profileUrl: 'https://linkme.to/mobile-bug-repro',
-    description: 'Creator headers are layout-shifting on iOS Safari 17. The hero image is overflowing the viewport and breaking the sticky nav. Fix immediately — this is affecting top creator campaigns with live deadlines.',
+    title: 'Olivia Chen',
+    profileUrl: 'https://link.me/oliviachen',
+    description: 'Add featured link — merch store launch today.',
     stage: 'unclaimed',
     routingType: 'all',
     assignedCreatorId: null,
@@ -69,9 +69,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- IN PROGRESS ---
   {
     id: 'ticket-3',
-    title: 'Add Verified Badge to Profile',
-    profileUrl: 'https://linkme.to/jordan-web3',
-    description: 'Add the premium verified badge checkmark icon to the creator name field on the live profile header page. Verify layout alignment across desktop and mobile.',
+    title: 'Marcus Webb',
+    profileUrl: 'https://link.me/marcuswebb',
+    description: 'Add Instagram and TikTok links.',
     stage: 'in_progress',
     routingType: 'specific',
     assignedCreatorId: 'creator-b',
@@ -88,9 +88,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- IN REVIEW ---
   {
     id: 'ticket-4',
-    title: 'Update Biography Text & Social Icons',
-    profileUrl: 'https://linkme.to/taylor-darkmode',
-    description: 'Replace the old description block with the new creator biography details. Add links to YouTube, TikTok, and Instagram with high-res brand icons.',
+    title: 'Sophie Nguyen',
+    profileUrl: 'https://link.me/sophianguyen',
+    description: 'Change bio text and update headshot.',
     stage: 'in_review',
     routingType: 'all',
     assignedCreatorId: 'creator-c',
@@ -104,12 +104,12 @@ const SEED_TICKETS: Ticket[] = [
     approvedAt: null,
     submittedAt: now - hour * 1,
   },
-  // --- COMPLETED / APPROVED (for Stats + Completed Pool) ---
+  // --- COMPLETED / APPROVED ---
   {
     id: 'ticket-done-1',
-    title: 'Update Creator Highlight Covers',
-    profileUrl: 'https://linkme.to/alex-devenv',
-    description: 'Upload the 4 new customized highlight grid cover assets to the user profile grid. Align background overlays with premium brand aesthetics.',
+    title: 'Alex Rivera',
+    profileUrl: 'https://link.me/alexrivera',
+    description: 'Add YouTube link.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-a',
@@ -125,9 +125,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-2',
-    title: 'Embed Custom Spotify Playlist',
-    profileUrl: 'https://linkme.to/jordan-feedback',
-    description: 'Integrate the Spotify iFrame playlist widget into the music section of the creator landing page. Set theme colors to match the warm sunset brand gradient.',
+    title: 'Jordan Lee',
+    profileUrl: 'https://link.me/jordanlee',
+    description: 'Update profile pic and bio.',
     stage: 'approved',
     routingType: 'specific',
     assignedCreatorId: 'creator-b',
@@ -143,9 +143,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-3',
-    title: 'Add Custom Bio Banner Image',
-    profileUrl: 'https://linkme.to/taylor-assets',
-    description: 'Upload and optimize the high-resolution profile cover image. Verify responsive crop sizing and alignment on retina mobile screens.',
+    title: 'Taylor Kim',
+    profileUrl: 'https://link.me/taylorkim',
+    description: 'Add Spotify and Apple Music links.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-c',
@@ -161,9 +161,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-4',
-    title: 'Fix Broken Redirect Links',
-    profileUrl: 'https://linkme.to/alex-infrastructure',
-    description: 'Audit and update all external call-to-action buttons. Replace broken target redirect slugs with active merchant store page links.',
+    title: 'Priya Sharma',
+    profileUrl: 'https://link.me/priyasharma',
+    description: 'Add featured link to new course page.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-a',
@@ -179,6 +179,7 @@ const SEED_TICKETS: Ticket[] = [
   },
 ];
 
+
 const SEED_TIMER_LOGS: TimerLog[] = [
   { id: 'log-3-active', ticketId: 'ticket-3', creatorId: 'creator-b', startedAt: now - hour * 1, endedAt: null },
   { id: 'log-3-past',   ticketId: 'ticket-3', creatorId: 'creator-b', startedAt: now - hour * 3, endedAt: now - hour * 3 + 1_800_000 },
@@ -188,17 +189,17 @@ const SEED_TIMER_LOGS: TimerLog[] = [
 const SEED_COMMENTS: Comment[] = [
   {
     id: 'comment-1', ticketId: 'ticket-3', userId: 'creator-b', userName: 'Jordan Lee',
-    userRole: 'creator', content: 'Claimed this profile. Starting with bio cover setup.',
+    userRole: 'creator', content: 'Claimed Marcus Webb\'s profile. Adding Instagram and TikTok links now.',
     createdAt: now - hour * 2, type: 'system', parentCommentId: null,
   },
   {
     id: 'comment-2', ticketId: 'ticket-4', userId: 'creator-c', userName: 'Taylor Kim',
-    userRole: 'creator', content: 'Updated biography text, verified font family shifts on mobile headers.',
+    userRole: 'creator', content: 'Updated bio text and swapped out the headshot. Ready for review.',
     createdAt: now - hour * 1, type: 'regular', parentCommentId: null,
   },
   {
     id: 'comment-3', ticketId: 'ticket-4', userId: 'system', userName: 'System',
-    userRole: 'admin', content: 'Profile submitted for review by Taylor Kim.',
+    userRole: 'admin', content: 'Submitted for Admin review by Taylor Kim.',
     createdAt: now - hour * 1, type: 'system', parentCommentId: null,
   },
 ];

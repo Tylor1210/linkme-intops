@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { type RoutingType, MOCK_USERS } from '../../db/schema';
 import { ticketService } from '../../services/ticketService';
-import { X, Link2, FileText, Users, UserCheck, Zap } from 'lucide-react';
+import { X, Link2, MessageSquare, Users, UserCheck, Zap } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -9,46 +9,52 @@ interface Props {
 }
 
 export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
-  const [title, setTitle] = useState('');
   const [profileUrl, setProfileUrl] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState('');
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [notes, setNotes] = useState('');
   const [routingType, setRoutingType] = useState<RoutingType>('all');
   const [assignedCreatorId, setAssignedCreatorId] = useState('');
   const [isHighPriority, setIsHighPriority] = useState(false);
 
   const creators = MOCK_USERS.filter(u => u.role === 'creator');
 
+  /** Extract the slug after the last "/" and format it as the profile name */
+  const deriveNameFromUrl = (val: string): string => {
+    const clean = val.endsWith('/') ? val.slice(0, -1) : val;
+    const parts = clean.split('/');
+    const slug = parts[parts.length - 1];
+    if (!slug || slug.includes('.') || slug.length < 2) return '';
+    return slug
+      .split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      .split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
   const handleUrlChange = (val: string) => {
     setProfileUrl(val);
-    
-    // Automatically extract slug if title is currently empty
-    if (!title.trim() && val.trim()) {
-      const cleanUrl = val.endsWith('/') ? val.slice(0, -1) : val;
-      const parts = cleanUrl.split('/');
-      const lastSegment = parts[parts.length - 1];
-      if (lastSegment && !lastSegment.includes('.') && lastSegment.length > 1) {
-        // Format e.g., "alex-rivera" -> "Alex Rivera"
-        const formatted = lastSegment
-          .split('-')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-          .split('_')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-        setTitle(formatted);
-      }
+    // Auto-populate name only while the user hasn't manually edited it
+    if (!titleTouched) {
+      setTitle(deriveNameFromUrl(val));
     }
+  };
+
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    setTitleTouched(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    if (!profileUrl.trim() || !title.trim()) return;
     if (routingType === 'specific' && !assignedCreatorId) return;
+
+    // notes becomes the description; fall back to a default if blank
+    const description = notes.trim() || 'No additional notes.';
 
     ticketService.createTicket(
       title.trim(),
-      profileUrl.trim() || null,
-      description.trim(),
+      profileUrl.trim(),
+      description,
       routingType,
       routingType === 'specific' ? assignedCreatorId : null,
       isHighPriority,
@@ -59,7 +65,7 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" style={{ maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
+      <div className="modal-box" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="modal-header">
@@ -78,47 +84,54 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="modal-body flex flex-col gap-4">
 
-            {/* Title */}
+            {/* ① Link.me URL — first & required */}
             <div className="form-group mb-0">
               <label className="form-label flex items-center gap-1.5">
-                <FileText size={13} /> Profile Title / Name
+                <Link2 size={13} /> Link.me Profile URL
               </label>
               <input
                 className="form-input"
-                placeholder="e.g. Refresh Instagram Creator Portfolio"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
+                placeholder="https://link.me/username"
+                value={profileUrl}
+                onChange={e => handleUrlChange(e.target.value)}
+                type="url"
                 required
                 autoFocus
               />
             </div>
 
-            {/* Profile URL */}
+            {/* ② Profile name — auto-populated, editable */}
             <div className="form-group mb-0">
-              <label className="form-label flex items-center gap-1.5">
-                <Link2 size={13} /> Profile URL <span style={{ color: 'var(--text-muted)' }}>(shown to creators as their direct work link)</span>
+              <label className="form-label flex items-center gap-1.5 justify-between">
+                <span>Profile Name</span>
+                {!titleTouched && title && (
+                  <span className="text-xs font-normal" style={{ color: 'var(--accent-primary)' }}>
+                    ✦ auto-filled from URL
+                  </span>
+                )}
               </label>
               <input
                 className="form-input"
-                placeholder="https://linkme.to/profile-slug"
-                value={profileUrl}
-                onChange={e => handleUrlChange(e.target.value)}
-                type="url"
+                placeholder="Auto-filled from URL slug"
+                value={title}
+                onChange={e => handleTitleChange(e.target.value)}
+                required
               />
             </div>
 
-            {/* Description */}
+            {/* ③ Notes — optional */}
             <div className="form-group mb-0">
               <label className="form-label flex items-center gap-1.5">
-                <FileText size={13} /> Requirements &amp; Description
+                <MessageSquare size={13} />
+                Notes
+                <span style={{ color: 'var(--text-muted)' }} className="font-normal">(optional)</span>
               </label>
               <textarea
                 className="form-textarea"
-                placeholder="Describe exactly what needs to be done, any brand guidelines, constraints, or acceptance criteria..."
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                required
-                style={{ minHeight: '110px' }}
+                placeholder='e.g. "Add Twitch link", "Update profile pic", "Add YouTube and Instagram"'
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                style={{ minHeight: '80px' }}
               />
             </div>
 
@@ -188,9 +201,9 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
             <button
               type="submit"
               className="btn btn-success"
-              disabled={!title.trim() || !description.trim() || (routingType === 'specific' && !assignedCreatorId)}
+              disabled={!profileUrl.trim() || !title.trim() || (routingType === 'specific' && !assignedCreatorId)}
             >
-              Submit Profile
+              Add to Queue
             </button>
           </div>
         </form>
