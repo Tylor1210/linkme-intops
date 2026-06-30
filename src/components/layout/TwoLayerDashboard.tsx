@@ -96,9 +96,21 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
     return t.assignedCreatorId === currentUser.id;
   });
 
-  const completedTickets = tickets
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayStartTs = todayStart.getTime();
+
+  const allCompleted = tickets
     .filter(t => t.stage === 'approved')
     .sort((a, b) => (b.approvedAt ?? 0) - (a.approvedAt ?? 0));
+
+  const completedToday = allCompleted.filter(t => (t.approvedAt ?? 0) >= todayStartTs);
+
+  const completedTickets = completedToday.length > 0
+    ? completedToday
+    : allCompleted.slice(0, 3);
+
+  const showingTodayOnly = completedToday.length > 0;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -186,6 +198,7 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
       {/* ── BOTTOM LAYER: Completed Pool ────────────────────────────────── */}
       <CompletedPool
         tickets={completedTickets}
+        showingTodayOnly={showingTodayOnly}
         currentUser={currentUser}
         onViewDetails={handleTicketClick}
         onRecallModalOpen={setRecallTicket}

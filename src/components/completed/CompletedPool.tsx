@@ -6,6 +6,7 @@ import { Archive, ChevronRight } from 'lucide-react';
 
 interface Props {
   tickets: Ticket[];
+  showingTodayOnly: boolean;
   currentUser: User;
   onViewDetails: (id: string) => void;
   onRecallModalOpen: (ticket: Ticket) => void;
@@ -13,7 +14,7 @@ interface Props {
 }
 
 export const CompletedPool: React.FC<Props> = ({
-  tickets, currentUser, onViewDetails, onRecallModalOpen, onRefresh,
+  tickets, showingTodayOnly, currentUser, onViewDetails, onRecallModalOpen, onRefresh,
 }) => {
   const isAdmin = currentUser.role === 'admin';
 
@@ -41,7 +42,10 @@ export const CompletedPool: React.FC<Props> = ({
         </div>
         <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
           <ChevronRight size={12} />
-          <span>Scroll to browse</span>
+          <span className="font-medium" style={{ color: showingTodayOnly ? 'var(--accent-mint)' : 'var(--text-muted)' }}>
+            {showingTodayOnly ? "Completed Today" : "Recent Fallback (Last 3)"}
+          </span>
+          <span>· Scroll to browse</span>
           {isAdmin && <span>· Admin: use Minor/Major Tweak to recall</span>}
         </div>
       </div>
