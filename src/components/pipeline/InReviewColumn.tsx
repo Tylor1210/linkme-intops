@@ -16,6 +16,7 @@ export const InReviewColumn: React.FC<Props> = ({
   tickets, currentUser, onTicketClick, onRefresh, onRejectOpen,
 }) => {
   const isAdmin = currentUser.role === 'admin';
+  const [expanded, setExpanded] = React.useState(false);
 
   const handleApprove = (ticket: Ticket) => {
     try {
@@ -48,32 +49,56 @@ export const InReviewColumn: React.FC<Props> = ({
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nothing awaiting review</p>
           </div>
         ) : (
-          tickets.map(t => (
-            <TicketCard
-              key={t.id}
-              ticket={t}
-              currentUser={currentUser}
-              onClick={onTicketClick}
-              actions={isAdmin ? (
-                <>
-                  <button
-                    className="btn-approve border"
-                    onClick={() => handleApprove(t)}
-                    title="Approve — move to Completed Pool"
-                  >
-                    <Check size={12} /> Approve
-                  </button>
-                  <button
-                    className="btn-reject border"
-                    onClick={() => onRejectOpen(t)}
-                    title="Reject — return to creator"
-                  >
-                    <X size={12} /> Reject
-                  </button>
-                </>
-              ) : undefined}
-            />
-          ))
+          <>
+            {tickets.map((t, index) => {
+              if (!expanded && index >= 4) return null;
+
+              return (
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  currentUser={currentUser}
+                  onClick={onTicketClick}
+                  actions={isAdmin ? (
+                    <>
+                      <button
+                        className="btn-approve border"
+                        onClick={() => handleApprove(t)}
+                        title="Approve — move to Completed Pool"
+                      >
+                        <Check size={12} /> Approve
+                      </button>
+                      <button
+                        className="btn-reject border"
+                        onClick={() => onRejectOpen(t)}
+                        title="Reject — return to creator"
+                      >
+                        <X size={12} /> Reject
+                      </button>
+                    </>
+                  ) : undefined}
+                />
+              );
+            })}
+
+            {tickets.length > 4 && (
+              <button
+                onClick={() => setExpanded(prev => !prev)}
+                className="btn btn-secondary w-full text-xs font-semibold py-2 rounded-xl mt-1 flex items-center justify-center gap-1.5"
+                style={{
+                  background: 'rgba(120, 120, 120, 0.04)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {expanded ? (
+                  <>Show Less</>
+                ) : (
+                  <>Show {tickets.length - 4} More Profiles</>
+                )}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

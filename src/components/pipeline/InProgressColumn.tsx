@@ -14,6 +14,7 @@ export const InProgressColumn: React.FC<Props> = ({
   tickets, currentUser, onTicketClick, onReclaimOpen,
 }) => {
   const isAdmin = currentUser.role === 'admin';
+  const [expanded, setExpanded] = React.useState(false);
 
   return (
     <div className="pipeline-column">
@@ -37,28 +38,52 @@ export const InProgressColumn: React.FC<Props> = ({
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No active work</p>
           </div>
         ) : (
-          tickets.map(t => (
-            <TicketCard
-              key={t.id}
-              ticket={t}
-              currentUser={currentUser}
-              onClick={onTicketClick}
-              actions={isAdmin && onReclaimOpen ? (
-                <button
-                  className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-1.5 rounded-lg border transition-all duration-150"
-                  style={{
-                    background: 'rgba(245,158,11,0.08)',
-                    color: 'var(--accent-orange)',
-                    borderColor: 'rgba(245,158,11,0.25)',
-                  }}
-                  onClick={() => onReclaimOpen(t)}
-                  title="Admin: pull this ticket back to the Unclaimed queue"
-                >
-                  <ShieldAlert size={12} /> Reclaim to Queue
-                </button>
-              ) : undefined}
-            />
-          ))
+          <>
+            {tickets.map((t, index) => {
+              if (!expanded && index >= 4) return null;
+
+              return (
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  currentUser={currentUser}
+                  onClick={onTicketClick}
+                  actions={isAdmin && onReclaimOpen ? (
+                    <button
+                      className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-1.5 rounded-lg border transition-all duration-150"
+                      style={{
+                        background: 'rgba(245,158,11,0.08)',
+                        color: 'var(--accent-orange)',
+                        borderColor: 'rgba(245,158,11,0.25)',
+                      }}
+                      onClick={() => onReclaimOpen(t)}
+                      title="Admin: pull this ticket back to the Unclaimed queue"
+                    >
+                      <ShieldAlert size={12} /> Reclaim to Queue
+                    </button>
+                  ) : undefined}
+                />
+              );
+            })}
+
+            {tickets.length > 4 && (
+              <button
+                onClick={() => setExpanded(prev => !prev)}
+                className="btn btn-secondary w-full text-xs font-semibold py-2 rounded-xl mt-1 flex items-center justify-center gap-1.5"
+                style={{
+                  background: 'rgba(120, 120, 120, 0.04)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {expanded ? (
+                  <>Show Less</>
+                ) : (
+                  <>Show {tickets.length - 4} More Profiles</>
+                )}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
