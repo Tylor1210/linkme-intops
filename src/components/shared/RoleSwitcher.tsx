@@ -22,19 +22,19 @@ export const RoleSwitcher: React.FC<Props> = ({ currentUser, onUserChange }) => 
     <div className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-150 text-sm"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl border transition-all duration-150 text-sm"
         style={{ background: 'rgba(120, 120, 120, 0.08)', borderColor: 'var(--border-color)' }}
       >
-        <img src={currentUser.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />
-        <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{currentUser.name}</span>
-        <span className="text-xs px-1.5 py-0.5 rounded-md font-semibold" style={{
+        <img src={currentUser.avatar} alt="" className="w-5.5 h-5.5 sm:w-6 sm:h-6 rounded-full object-cover" />
+        <span className="hidden sm:inline font-medium" style={{ color: 'var(--text-primary)' }}>{currentUser.name}</span>
+        <span className="hidden sm:inline-flex text-xs px-1.5 py-0.5 rounded-md font-semibold" style={{
           background: currentUser.role === 'admin' ? 'rgba(161,140,209,0.15)' : 'rgba(0,242,254,0.12)',
           color: currentUser.role === 'admin' ? 'var(--accent-purple)' : 'var(--accent-primary)',
         }}>
           {currentUser.role === 'admin' ? <ShieldCheck size={10} className="inline mr-0.5" /> : <Pencil size={10} className="inline mr-0.5" />}
           {currentUser.role.toUpperCase()}
         </span>
-        <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
+        <ChevronDown size={12} style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }} />
       </button>
 
       {open && (
