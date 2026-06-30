@@ -1,9 +1,9 @@
 import type { Ticket, TimerLog, Comment } from '../db/schema';
 
 const STORAGE_KEYS = {
-  TICKETS: 'workflow_v2_tickets',
-  TIMER_LOGS: 'workflow_v2_timer_logs',
-  COMMENTS: 'workflow_v2_comments',
+  TICKETS: 'workflow_v3_tickets',
+  TIMER_LOGS: 'workflow_v3_timer_logs',
+  COMMENTS: 'workflow_v3_comments',
 };
 
 const now = Date.now();
