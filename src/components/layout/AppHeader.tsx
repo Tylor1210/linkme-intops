@@ -24,8 +24,8 @@ export const AppHeader: React.FC<Props> = ({
 
   return (
     <header className="app-header">
-      {/* Brand */}
-      <div className="flex items-center gap-4">
+      {/* Top Row: Brand + Mobile Switchers */}
+      <div className="flex items-center justify-between md:justify-start gap-4 w-full md:w-auto">
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center font-display font-black text-sm"
@@ -39,32 +39,49 @@ export const AppHeader: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Navigation tabs */}
-        <nav className="flex items-center gap-1 ml-4">
+        {/* Switchers visible on MOBILE ONLY */}
+        <div className="flex items-center gap-2 md:hidden">
           <button
-            onClick={() => onTabChange('board')}
-            className={`tab-btn flex items-center gap-1.5 ${activeTab === 'board' ? 'active' : ''}`}
+            onClick={onThemeToggle}
+            className="p-2 rounded-xl border transition-all duration-150"
+            style={{
+              background: 'rgba(120, 120, 120, 0.08)',
+              borderColor: 'var(--border-color)',
+              color: 'var(--text-secondary)',
+            }}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
           >
-            <Layout size={13} /> Pipeline
+            {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
-          {isAdmin && (
-            <button
-              onClick={() => onTabChange('stats')}
-              className={`tab-btn flex items-center gap-1.5 ${activeTab === 'stats' ? 'active' : ''}`}
-            >
-              <BarChart3 size={13} /> Analytics
-            </button>
-          )}
-        </nav>
+          <RoleSwitcher currentUser={currentUser} onUserChange={onUserChange} />
+        </div>
       </div>
 
-      {/* Right: Theme Switcher + Role switcher */}
-      <div className="flex items-center gap-3">
+      {/* Middle Row (Mobile) / Left Nav (Desktop) */}
+      <nav className="flex items-center gap-1 w-full md:w-auto justify-between md:justify-start border-t md:border-t-0 pt-2.5 md:pt-0" style={{ borderColor: 'var(--border-color)' }}>
+        <button
+          onClick={() => onTabChange('board')}
+          className={`tab-btn flex items-center justify-center gap-1.5 flex-1 md:flex-initial ${activeTab === 'board' ? 'active' : ''}`}
+        >
+          <Layout size={13} /> Pipeline
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => onTabChange('stats')}
+            className={`tab-btn flex items-center justify-center gap-1.5 flex-1 md:flex-initial ${activeTab === 'stats' ? 'active' : ''}`}
+          >
+            <BarChart3 size={13} /> Analytics
+          </button>
+        )}
+      </nav>
+
+      {/* Right Row: Desktop Switchers ONLY */}
+      <div className="hidden md:flex items-center gap-3">
         <button
           onClick={onThemeToggle}
           className="p-2 rounded-xl border transition-all duration-150"
           style={{
-            background: 'rgba(255,255,255,0.04)',
+            background: 'rgba(120, 120, 120, 0.08)',
             borderColor: 'var(--border-color)',
             color: 'var(--text-secondary)',
           }}

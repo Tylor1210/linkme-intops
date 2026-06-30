@@ -105,7 +105,7 @@
   }
 
   .app-header {
-    @apply sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b;
+    @apply sticky top-0 z-30 flex flex-col md:flex-row md:items-center justify-between px-4 md:px-6 py-3 border-b gap-3 md:gap-0;
     background-color: var(--bg-header);
     backdrop-filter: blur(12px);
     border-color: var(--border-color);
