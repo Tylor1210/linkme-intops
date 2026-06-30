@@ -50,7 +50,7 @@ function App() {
       />
 
       {/* Main scrollable content */}
-      <main className="flex-1 relative z-10 overflow-y-auto">
+      <main className="flex-1 relative overflow-y-auto">
         <div className="max-w-screen-xl mx-auto px-6 py-6 pb-16">
           <TwoLayerDashboard
             key={currentUser.id}
