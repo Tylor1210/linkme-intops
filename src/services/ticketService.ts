@@ -87,9 +87,14 @@ export const ticketService = {
       })
       .sort((a, b) => {
         const tierDiff = TIER(a) - TIER(b);
-        // Primary: tier (priority + routing specificity)
         if (tierDiff !== 0) return tierDiff;
-        // Secondary: createdAt ascending → strict FIFO within same tier
+
+        // Secondary: manual sortOrder if defined
+        const sa = a.sortOrder ?? Infinity;
+        const sb = b.sortOrder ?? Infinity;
+        if (sa !== sb) return sa - sb;
+
+        // Tertiary: createdAt ascending → strict FIFO within same tier
         return a.createdAt - b.createdAt;
       });
   },
@@ -426,16 +431,30 @@ export const ticketService = {
 
   // ─── ADMIN UNCLAIMED POOL MANAGEMENT ───────────────────────────────────────────
 
-  /**
-   * Persists a new manual sort order for the unclaimed pool.
-   * Each ticket gets a `sortOrder` index so admin-drag positions survive refreshes.
-   */
   reorderUnclaimedPool(orderedIds: string[]): void {
     const tickets = dbService.getTickets();
+    
+    // First apply the basic sort orders
     orderedIds.forEach((id, index) => {
       const t = tickets.find(tk => tk.id === id);
       if (t) t.sortOrder = index;
     });
+
+    // Backwards scan to auto-escalate normal tickets placed above priority ones
+    let seenHighPriority = false;
+    for (let i = orderedIds.length - 1; i >= 0; i--) {
+      const t = tickets.find(tk => tk.id === orderedIds[i]);
+      if (t) {
+        if (t.isHighPriority) {
+          seenHighPriority = true;
+        } else if (seenHighPriority) {
+          t.isHighPriority = true;
+          // Log a system comment so the action is audited in the activity log
+          this.addSystemComment(t.id, `Escalated to HIGH PRIORITY: Placed above a priority profile in queue reordering.`);
+        }
+      }
+    }
+
     dbService.saveTickets(tickets);
   },
 
