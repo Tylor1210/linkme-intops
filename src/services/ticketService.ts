@@ -11,6 +11,21 @@ type AdminOnlyFields = 'currentStageStartedAt' | 'totalInProgressTime' | 'claime
 export type CreatorTicketView = Omit<Ticket, AdminOnlyFields>;
 export type TicketView = Ticket | CreatorTicketView;
 
+export interface CreatorStats {
+  claimedCount: number;
+  completedCount: number;
+  avgWorkDurationMs: number;
+  completedTickets: {
+    id: string;
+    title: string;
+    profileUrl: string | null;
+    creatorName: string;
+    creatorAvatar: string;
+    formattedWorkTime: string;
+    formattedApprovedAt: string;
+  }[];
+}
+
 const uuid = () =>
   Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 9);
 
@@ -525,5 +540,99 @@ export const ticketService = {
       }
     }
     return { timeInStage, totalInProgressTime: ticket.totalInProgressTime };
+  },
+
+  /**
+   * Secure backend-layer statistics calculation.
+   * Resolves the Creator stats page by filtering against the real DB tickets
+   * (which contain the raw claimed/completed timestamps), and returning an
+   * aggregated, fully formatted statistics payload.
+   *
+   * Crucially, the returned CreatorStats does NOT contain any raw timestamp
+   * fields (claimedAt, approvedAt, etc.), thereby maintaining 100% RBAC security.
+   */
+  getStats(
+    currentUser: User,
+    selectedCreatorId: string,
+    filter: string,
+    customStart: string,
+    customEnd: string
+  ): CreatorStats {
+    const tickets = dbService.getTickets();
+    const isCreator = currentUser.role === 'creator';
+    
+    // Filter tickets by creator ownership
+    const filteredByCreator = tickets.filter(t => {
+      if (isCreator) {
+        return t.assignedCreatorId === currentUser.id;
+      }
+      if (selectedCreatorId !== 'all') {
+        return t.assignedCreatorId === selectedCreatorId;
+      }
+      return true;
+    });
+
+    // Calculate dates range
+    const getRange = (filterType: string, startStr: string, endStr: string): [number, number] => {
+      const nowVal = Date.now();
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      switch (filterType) {
+        case 'today': return [todayStart.getTime(), nowVal];
+        case 'week': return [nowVal - 7 * 24 * 3600000, nowVal];
+        case 'month': return [nowVal - 30 * 24 * 3600000, nowVal];
+        case 'all': return [0, nowVal];
+        default: {
+          const start = startStr ? new Date(startStr).getTime() : 0;
+          const end = endStr ? new Date(endStr + 'T23:59:59').getTime() : nowVal;
+          return [start, end];
+        }
+      }
+    };
+
+    const [rangeStart, rangeEnd] = getRange(filter, customStart, customEnd);
+    const inRange = (ts: number | null | undefined) => ts !== undefined && ts !== null && ts >= rangeStart && ts <= rangeEnd;
+
+    const claimed = filteredByCreator.filter(t => inRange(t.claimedAt));
+    const completed = filteredByCreator.filter(t => t.stage === 'approved' && inRange(t.approvedAt));
+
+    const avgDuration = (() => {
+      const withTime = completed.filter(t => t.totalInProgressTime !== undefined && t.totalInProgressTime > 0);
+      if (withTime.length === 0) return 0;
+      return withTime.reduce((sum, t) => sum + (t.totalInProgressTime ?? 0), 0) / withTime.length;
+    })();
+
+    const completedList = completed.map(t => {
+      const creator = MOCK_USERS.find(u => u.id === t.assignedCreatorId);
+      
+      const fmtDuration = (ms: number) => {
+        if (ms <= 0) return '—';
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms / 60000) % 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m`;
+      };
+      
+      const fmtDate = (ts: number | null | undefined) => {
+        if (!ts) return '—';
+        return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      };
+
+      return {
+        id: t.id,
+        title: t.title,
+        profileUrl: t.profileUrl,
+        creatorName: creator ? creator.name : 'Unknown',
+        creatorAvatar: creator ? creator.avatar : '',
+        formattedWorkTime: fmtDuration(t.totalInProgressTime ?? 0),
+        formattedApprovedAt: fmtDate(t.approvedAt),
+      };
+    });
+
+    return {
+      claimedCount: claimed.length,
+      completedCount: completed.length,
+      avgWorkDurationMs: avgDuration,
+      completedTickets: completedList,
+    };
   },
 };

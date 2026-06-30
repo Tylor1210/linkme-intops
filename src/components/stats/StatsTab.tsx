@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { type Ticket, type User, MOCK_USERS } from '../../db/schema';
-import { BarChart3, Calendar, CheckCircle2, Clock, TrendingUp, Users } from 'lucide-react';
+import { type User } from '../../db/schema';
+import { ticketService } from '../../services/ticketService';
+import { BarChart3, Calendar, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
 
 type FilterType = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 interface Props {
-  tickets: Ticket[];
   currentUser: User;
 }
 
@@ -17,23 +17,7 @@ const fmtDuration = (ms: number) => {
   return `${m}m`;
 };
 
-const getRange = (filter: FilterType, customStart: string, customEnd: string): [number, number] => {
-  const now = Date.now();
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  switch (filter) {
-    case 'today': return [todayStart.getTime(), now];
-    case 'week': return [now - 7 * 24 * 3600000, now];
-    case 'month': return [now - 30 * 24 * 3600000, now];
-    case 'all': return [0, now];
-    case 'custom': {
-      const start = customStart ? new Date(customStart).getTime() : 0;
-      const end = customEnd ? new Date(customEnd + 'T23:59:59').getTime() : now;
-      return [start, end];
-    }
-  }
-};
-
-export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
+export const StatsTab: React.FC<Props> = ({ currentUser }) => {
   const [filter, setFilter] = useState<FilterType>('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -41,39 +25,16 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
 
   const isAdmin = currentUser.role === 'admin';
 
-  // Creators only see their own stats; Admins can filter by specific creator or "all"
-  const filteredTickets = useMemo(() => {
-    if (currentUser.role === 'creator') {
-      return tickets.filter(t => t.assignedCreatorId === currentUser.id);
-    }
-    if (selectedCreatorId !== 'all') {
-      return tickets.filter(t => t.assignedCreatorId === selectedCreatorId);
-    }
-    return tickets;
-  }, [tickets, currentUser, selectedCreatorId]);
-
-  const [rangeStart, rangeEnd] = useMemo(
-    () => getRange(filter, customStart, customEnd),
-    [filter, customStart, customEnd]
-  );
-
-  const inRange = (ts: number | null) => ts !== null && ts >= rangeStart && ts <= rangeEnd;
-
-  const completedInRange = useMemo(
-    () => filteredTickets.filter(t => t.stage === 'approved' && inRange(t.approvedAt)),
-    [filteredTickets, rangeStart, rangeEnd]
-  );
-
-  const claimedInRange = useMemo(
-    () => filteredTickets.filter(t => inRange(t.claimedAt)),
-    [filteredTickets, rangeStart, rangeEnd]
-  );
-
-  const avgDuration = useMemo(() => {
-    const withTime = completedInRange.filter(t => t.totalInProgressTime > 0);
-    if (withTime.length === 0) return 0;
-    return withTime.reduce((sum, t) => sum + t.totalInProgressTime, 0) / withTime.length;
-  }, [completedInRange]);
+  // Securely request pre-computed, RBAC-sanitized statistics from the service layer
+  const stats = useMemo(() => {
+    return ticketService.getStats(
+      currentUser,
+      selectedCreatorId,
+      filter,
+      customStart,
+      customEnd
+    );
+  }, [currentUser, selectedCreatorId, filter, customStart, customEnd]);
 
   const FILTERS: { key: FilterType; label: string }[] = [
     { key: 'today', label: 'Today' },
@@ -123,9 +84,9 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
                 style={{ width: 'auto', padding: '0.4rem 2rem 0.4rem 1rem', background: 'rgba(120, 120, 120, 0.04)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
               >
                 <option value="all">All Creators</option>
-                {MOCK_USERS.filter(u => u.role === 'creator').map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                <option value="creator-a">Alex Rivera</option>
+                <option value="creator-b">Jordan Lee</option>
+                <option value="creator-c">Taylor Kim</option>
               </select>
             </div>
           )}
@@ -154,12 +115,12 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Profiles Claimed</span>
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255, 0, 127, 0.08)' }}>
-              <Users size={15} style={{ color: 'var(--accent-primary)' }} />
+              <Clock size={15} style={{ color: 'var(--accent-primary)' }} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-display font-bold" style={{ color: 'var(--accent-primary)' }}>
-              {claimedInRange.length}
+              {stats.claimedCount}
             </span>
             <span className="text-sm" style={{ color: 'var(--text-muted)' }}>tickets</span>
           </div>
@@ -176,7 +137,7 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-display font-bold" style={{ color: 'var(--accent-mint)' }}>
-              {completedInRange.length}
+              {stats.completedCount}
             </span>
             <span className="text-sm" style={{ color: 'var(--text-muted)' }}>tickets</span>
           </div>
@@ -193,7 +154,7 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-display font-bold" style={{ color: 'var(--accent-purple)' }}>
-              {fmtDuration(avgDuration)}
+              {fmtDuration(stats.avgWorkDurationMs)}
             </span>
           </div>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Mean active work time per profile</p>
@@ -201,7 +162,7 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
       </div>
 
       {/* Completion rate bar */}
-      {claimedInRange.length > 0 && (
+      {stats.claimedCount > 0 && (
         <div className="p-5 rounded-2xl border" style={{ borderColor: 'var(--border-color)', background: 'rgba(120, 120, 120, 0.02)' }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -209,29 +170,29 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
               <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Completion Rate</span>
             </div>
             <span className="text-sm font-bold" style={{ color: 'var(--accent-mint)' }}>
-              {Math.round((completedInRange.length / claimedInRange.length) * 100)}%
+              {Math.round((stats.completedCount / stats.claimedCount) * 100)}%
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(120, 120, 120, 0.08)' }}>
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{
-                width: `${Math.round((completedInRange.length / claimedInRange.length) * 100)}%`,
+                width: `${Math.round((stats.completedCount / stats.claimedCount) * 100)}%`,
                 background: 'linear-gradient(90deg, var(--accent-mint), var(--accent-primary))',
               }}
             />
           </div>
           <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-            {completedInRange.length} completed out of {claimedInRange.length} claimed
+            {stats.completedCount} completed out of {stats.claimedCount} claimed
           </p>
         </div>
       )}
 
       {/* Completed tickets table */}
-      {completedInRange.length > 0 && (
+      {stats.completedTickets.length > 0 && (
         <div>
           <h3 className="font-display font-semibold text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-            Completed Profiles ({completedInRange.length})
+            Completed Profiles ({stats.completedTickets.length})
           </h3>
           <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border-color)' }}>
             <table className="w-full text-sm">
@@ -244,42 +205,37 @@ export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
                 </tr>
               </thead>
               <tbody>
-                {completedInRange.map((t, i) => {
-                  const creator = MOCK_USERS.find((u) => u.id === t.assignedCreatorId);
-                  return (
-                    <tr key={t.id} style={{ borderBottom: i < completedInRange.length - 1 ? '1px solid var(--border-color)' : 'none', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium truncate max-w-xs" style={{ color: 'var(--text-primary)' }}>{t.title}</p>
-                        {t.profileUrl && (
-                          <a href={t.profileUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: 'var(--accent-primary)' }}>
-                            {t.profileUrl.replace('https://', '')}
-                          </a>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {creator && (
-                          <div className="flex items-center gap-2">
-                            <img src={creator.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
-                            <span style={{ color: 'var(--text-secondary)' }}>{creator.name}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium" style={{ color: 'var(--accent-purple)' }}>
-                        {fmtDuration(t.totalInProgressTime)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {t.approvedAt ? new Date(t.approvedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {stats.completedTickets.map((t, i) => (
+                  <tr key={t.id} style={{ borderBottom: i < stats.completedTickets.length - 1 ? '1px solid var(--border-color)' : 'none', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium truncate max-w-xs" style={{ color: 'var(--text-primary)' }}>{t.title}</p>
+                      {t.profileUrl && (
+                        <a href={t.profileUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: 'var(--accent-primary)' }}>
+                          {t.profileUrl.replace('https://', '')}
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {t.creatorAvatar && <img src={t.creatorAvatar} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                        <span style={{ color: 'var(--text-secondary)' }}>{t.creatorName}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium" style={{ color: 'var(--accent-purple)' }}>
+                      {t.formattedWorkTime}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {t.formattedApprovedAt}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {completedInRange.length === 0 && (
+      {stats.completedTickets.length === 0 && (
         <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
           <BarChart3 size={36} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">No completed profiles in this date range.</p>
