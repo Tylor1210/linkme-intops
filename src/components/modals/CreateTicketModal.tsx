@@ -187,10 +187,10 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
             <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-success"
               disabled={!title.trim() || !description.trim() || (routingType === 'specific' && !assignedCreatorId)}
             >
-              Create Request
+              Submit Profile
             </button>
           </div>
         </form>
