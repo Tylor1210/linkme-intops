@@ -29,14 +29,14 @@ export const TicketCard: React.FC<Props> = ({ ticket, currentUser, onClick, acti
     <div
       className="card cursor-pointer group relative"
       onClick={() => onClick(ticket.id)}
-      style={{ padding: '0.875rem' }}
+      style={{
+        padding: '0.875rem',
+        ...(ticket.isHighPriority && {
+          borderColor: 'rgba(239, 68, 68, 0.7)',
+          boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.4), 0 0 14px rgba(239, 68, 68, 0.18)',
+        }),
+      }}
     >
-      {/* High priority indicator strip */}
-      {ticket.isHighPriority && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-          style={{ background: 'linear-gradient(90deg, var(--accent-coral), transparent)' }} />
-      )}
-
       {/* Header row */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
