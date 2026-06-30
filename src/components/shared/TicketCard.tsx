@@ -1,6 +1,6 @@
 import React from 'react';
 import { type Ticket, type User, MOCK_USERS } from '../../db/schema';
-import { AlertTriangle, Link2, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Link2, ExternalLink, Zap } from 'lucide-react';
 
 interface Props {
   ticket: Ticket;
@@ -8,9 +8,11 @@ interface Props {
   onClick: (id: string) => void;
   /** Optional extra actions (e.g. Approve/Reject buttons for In Review) */
   actions?: React.ReactNode;
+  /** Admin-only: escalate this unclaimed ticket to high priority */
+  onEscalate?: (id: string) => void;
 }
 
-export const TicketCard: React.FC<Props> = ({ ticket, currentUser, onClick, actions }) => {
+export const TicketCard: React.FC<Props> = ({ ticket, currentUser, onClick, actions, onEscalate }) => {
   const isAdmin = currentUser.role === 'admin';
   const assignedUser = MOCK_USERS.find(u => u.id === ticket.assignedCreatorId);
 
@@ -76,9 +78,19 @@ export const TicketCard: React.FC<Props> = ({ ticket, currentUser, onClick, acti
         </div>
       )}
 
-      {/* Extra action slot (e.g. Approve/Reject) */}
-      {actions && (
+      {/* Extra action slot (e.g. Approve/Reject or Escalate) */}
+      {(actions || onEscalate) && (
         <div className="mt-3 pt-2 border-t flex gap-2" style={{ borderColor: 'var(--border-color)' }} onClick={e => e.stopPropagation()}>
+          {onEscalate && (
+            <button
+              className="btn-escalate"
+              onClick={() => onEscalate(ticket.id)}
+              title="Escalate this ticket to high priority and move it to the top of the queue"
+            >
+              <Zap size={11} />
+              Escalate to Priority
+            </button>
+          )}
           {actions}
         </div>
       )}

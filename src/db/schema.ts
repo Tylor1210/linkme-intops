@@ -29,6 +29,8 @@ export interface Ticket {
   claimedAt: number | null;
   approvedAt: number | null;
   submittedAt: number | null;
+  /** Admin-controlled manual sort order for the unclaimed pool (lower = higher in list) */
+  sortOrder?: number;
 }
 
 export interface TimerLog {

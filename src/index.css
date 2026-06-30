@@ -355,6 +355,71 @@
     border-color: rgba(239, 68, 68, 0.3);
     animation: redPulseText 1.5s infinite alternate;
   }
+
+  /* === DRAG-AND-DROP (Admin Unclaimed Pool) === */
+  .unclaimed-dnd-list {
+    @apply flex flex-col gap-3;
+  }
+
+  .dnd-item {
+    @apply flex items-start gap-1.5 relative;
+    transition: opacity 0.15s ease, transform 0.12s ease;
+    border-radius: 1rem;
+  }
+
+  .dnd-item--dragging {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+
+  .dnd-item--over {
+    /* Drop zone highlight — subtle top border indicator */
+  }
+  .dnd-item--over::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-primary), transparent);
+    animation: dropLinePulse 0.6s ease infinite alternate;
+  }
+
+  .dnd-handle {
+    @apply flex items-center justify-center flex-shrink-0 rounded-lg cursor-grab select-none;
+    width: 22px;
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.35;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  .dnd-handle:hover {
+    opacity: 1;
+    color: var(--accent-primary);
+    cursor: grab;
+  }
+  .dnd-handle:active {
+    cursor: grabbing;
+  }
+
+  .dnd-card-wrapper {
+    @apply flex-1 min-w-0;
+  }
+
+  /* === ESCALATE BUTTON === */
+  .btn-escalate {
+    background: rgba(255, 138, 0, 0.08);
+    color: var(--accent-orange);
+    border: 1px solid rgba(255, 138, 0, 0.2);
+    @apply flex-1 text-xs font-semibold rounded-lg py-1.5 flex items-center justify-center gap-1 transition-all duration-150 cursor-pointer;
+  }
+  .btn-escalate:hover {
+    background: rgba(255, 138, 0, 0.16);
+    box-shadow: 0 0 12px rgba(255, 138, 0, 0.3);
+    border-color: rgba(255, 138, 0, 0.4);
+  }
 }
 
 /* === KEYFRAMES === */
@@ -400,4 +465,8 @@
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+@keyframes dropLinePulse {
+  0%   { opacity: 0.5; }
+  100% { opacity: 1; }
 }

@@ -1,25 +1,85 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { type Ticket, type User } from '../../db/schema';
 import { TicketCard } from '../shared/TicketCard';
 import { CreatorStackView } from '../creator/CreatorStackView';
-import { Plus, Inbox, AlertTriangle } from 'lucide-react';
+import { Plus, Inbox, AlertTriangle, GripVertical } from 'lucide-react';
 
 interface Props {
-  tickets: Ticket[];      // For Admin: all unclaimed tickets (sorted chronologically)
+  tickets: Ticket[];      // For Admin: all unclaimed tickets (sorted by sortOrder / chronologically)
   queue: Ticket[];        // For Creator: priority-sorted queue
   currentUser: User;
   hasHighPriority: boolean;
   onTicketClick: (id: string) => void;
   onClaimTop: () => void;
   onCreateNew: () => void;
+  /** Admin only: called after a drag-drop reorder with the new ordered IDs */
+  onReorder?: (orderedIds: string[]) => void;
+  /** Admin only: escalate a ticket to high-priority top of queue */
+  onEscalate?: (ticketId: string) => void;
 }
 
 export const UnclaimedColumn: React.FC<Props> = ({
   tickets, queue, currentUser, hasHighPriority, onTicketClick, onClaimTop, onCreateNew,
+  onReorder, onEscalate,
 }) => {
   const isAdmin = currentUser.role === 'admin';
   const count = isAdmin ? tickets.length : queue.length;
 
+  // ── Drag-and-drop state ──────────────────────────────────────────────────
+  const [localTickets, setLocalTickets] = useState<Ticket[]>(tickets);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const dragNode = useRef<HTMLDivElement | null>(null);
+
+  // Keep localTickets in sync when the parent refreshes (e.g. after escalate)
+  React.useEffect(() => {
+    setLocalTickets(tickets);
+  }, [tickets]);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDragIndex(index);
+    dragNode.current = e.currentTarget;
+    e.dataTransfer.effectAllowed = 'move';
+    // Slight delay so the ghost image is rendered before drag styles kick in
+    requestAnimationFrame(() => {
+      e.currentTarget.classList.add('dragging');
+    });
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) return;
+    setOverIndex(index);
+
+    // Live-reorder during drag for visual feedback
+    const updated = [...localTickets];
+    const [dragged] = updated.splice(dragIndex, 1);
+    updated.splice(index, 0, dragged);
+    setLocalTickets(updated);
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('dragging');
+    setDragIndex(null);
+    setOverIndex(null);
+
+    // Persist the new order
+    if (onReorder) {
+      onReorder(localTickets.map(t => t.id));
+    }
+  };
+
+  const handleDragLeave = () => {
+    // intentionally empty — overIndex is cleared on dragEnd
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={`pipeline-column flex flex-col ${hasHighPriority ? 'column-high-priority' : ''}`}>
 
@@ -42,29 +102,57 @@ export const UnclaimedColumn: React.FC<Props> = ({
             <span className="badge badge-unclaimed text-xs" style={{ padding: '0.1rem 0.45rem' }}>{count}</span>
           )}
         </div>
-        {isAdmin && (
-          <button onClick={onCreateNew} className="btn btn-primary btn-xs gap-1">
-            <Plus size={12} /> New
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Drag to reorder</span>
+          )}
+          {isAdmin && (
+            <button onClick={onCreateNew} className="btn btn-primary btn-xs gap-1">
+              <Plus size={12} /> New
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Column body */}
       {isAdmin ? (
-        <div className="pipeline-column-body">
-          {tickets.length === 0 ? (
+        <div className="pipeline-column-body unclaimed-dnd-list">
+          {localTickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 text-center py-10 gap-2">
               <Inbox size={28} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No unclaimed profiles</p>
             </div>
           ) : (
-            tickets.map(t => (
-              <TicketCard
+            localTickets.map((t, index) => (
+              <div
                 key={t.id}
-                ticket={t}
-                currentUser={currentUser}
-                onClick={onTicketClick}
-              />
+                className={`dnd-item ${dragIndex === index ? 'dnd-item--dragging' : ''} ${overIndex === index ? 'dnd-item--over' : ''}`}
+                draggable
+                onDragStart={e => handleDragStart(e, index)}
+                onDragEnter={e => handleDragEnter(e, index)}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDragLeave={handleDragLeave}
+              >
+                {/* Drag handle */}
+                <div
+                  className="dnd-handle"
+                  title="Drag to reorder"
+                  onMouseDown={e => e.stopPropagation()}
+                >
+                  <GripVertical size={14} />
+                </div>
+
+                {/* Card with escalate action */}
+                <div className="dnd-card-wrapper">
+                  <TicketCard
+                    ticket={t}
+                    currentUser={currentUser}
+                    onClick={onTicketClick}
+                    onEscalate={!t.isHighPriority && onEscalate ? onEscalate : undefined}
+                  />
+                </div>
+              </div>
             ))
           )}
         </div>

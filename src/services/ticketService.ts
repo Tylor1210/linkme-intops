@@ -369,6 +369,43 @@ export const ticketService = {
     return ticket;
   },
 
+  // ─── ADMIN UNCLAIMED POOL MANAGEMENT ───────────────────────────────────────────
+
+  /**
+   * Persists a new manual sort order for the unclaimed pool.
+   * Each ticket gets a `sortOrder` index so admin-drag positions survive refreshes.
+   */
+  reorderUnclaimedPool(orderedIds: string[]): void {
+    const tickets = dbService.getTickets();
+    orderedIds.forEach((id, index) => {
+      const t = tickets.find(tk => tk.id === id);
+      if (t) t.sortOrder = index;
+    });
+    dbService.saveTickets(tickets);
+  },
+
+  /**
+   * Escalates an unclaimed ticket to high priority and moves it to the top
+   * of the admin pool (sortOrder = -1 so it always leads).
+   */
+  escalateToPriority(ticketId: string, adminId: string): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'unclaimed') throw new Error('Can only escalate unclaimed tickets');
+
+    ticket.isHighPriority = true;
+    ticket.sortOrder = -1;
+    ticket.updatedAt = Date.now();
+    dbService.saveTickets(tickets);
+
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+    this.addSystemComment(ticketId, `Escalated to HIGH PRIORITY by ${adminName}.`);
+    return ticket;
+  },
+
   // ─── COMMENTS ────────────────────────────────────────────────────────────────
 
   addUserComment(ticketId: string, userId: string, content: string, parentCommentId: string | null = null): Comment {

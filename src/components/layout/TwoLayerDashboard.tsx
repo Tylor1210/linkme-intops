@@ -51,7 +51,13 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
 
   const unclaimedForAdmin = tickets
     .filter(t => t.stage === 'unclaimed')
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) => {
+      const sa = a.sortOrder ?? Infinity;
+      const sb = b.sortOrder ?? Infinity;
+      if (sa !== sb) return sa - sb;
+      // Fallback: newest first (original default)
+      return b.createdAt - a.createdAt;
+    });
 
   const creatorQueue = isCreator
     ? ticketService.getCreatorQueue(currentUser.id)
@@ -84,6 +90,20 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
       const claimed = ticketService.claimTopProfile(currentUser.id);
       loadTickets();
       setDetailsTicketId(claimed.id); // Open work view immediately after claiming
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleReorderUnclaimed = (orderedIds: string[]) => {
+    ticketService.reorderUnclaimedPool(orderedIds);
+    loadTickets();
+  };
+
+  const handleEscalate = (ticketId: string) => {
+    try {
+      ticketService.escalateToPriority(ticketId, currentUser.id);
+      loadTickets();
     } catch (err: any) {
       alert(err.message);
     }
@@ -128,6 +148,8 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
           onTicketClick={handleTicketClick}
           onClaimTop={handleClaimTop}
           onCreateNew={() => setShowCreateModal(true)}
+          onReorder={handleReorderUnclaimed}
+          onEscalate={handleEscalate}
         />
         <InProgressColumn
           tickets={inProgressTickets}
