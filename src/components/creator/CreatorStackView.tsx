@@ -73,15 +73,12 @@ export const CreatorStackView: React.FC<Props> = ({ queue, onClaimTop }) => {
             style={{
               zIndex: 10,
               boxShadow: topTicket.isHighPriority
-                ? '0 8px 32px rgba(255,94,98,0.25), 0 0 0 1px rgba(255,94,98,0.3)'
+                ? '0 0 0 1px rgba(239, 68, 68, 0.4), 0 8px 32px rgba(239, 68, 68, 0.18)'
                 : '0 8px 32px rgba(0,0,0,0.4)',
-              borderColor: topTicket.isHighPriority ? 'rgba(255,94,98,0.4)' : 'rgba(255,255,255,0.12)',
+              borderColor: topTicket.isHighPriority ? 'rgba(239, 68, 68, 0.7)' : 'rgba(255,255,255,0.12)',
             }}
           >
-            {/* Priority strip */}
-            {topTicket.isHighPriority && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, var(--accent-coral), transparent)' }} />
-            )}
+
 
             {/* Field 1: Profile URL — the primary action link */}
             <div>
