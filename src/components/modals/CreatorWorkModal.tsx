@@ -14,6 +14,7 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const loadComments = () => {
     const all = ticketService.getCommentsForTicket(ticket.id);
@@ -27,6 +28,10 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
   useEffect(() => { loadComments(); }, [ticket.id]);
 
   const handleSubmitForReview = () => {
+    if (!confirmSubmit) {
+      setConfirmSubmit(true);
+      return;
+    }
     setSubmitting(true);
     try {
       ticketService.submitTicketForReview(ticket.id);
@@ -35,6 +40,7 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
     } catch (err: any) {
       alert(err.message);
       setSubmitting(false);
+      setConfirmSubmit(false);
     }
   };
 
@@ -197,16 +203,45 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
         </div>
 
         {/* ── Footer: Submit action ── */}
-        <div className="modal-footer">
-          <button onClick={onClose} className="btn btn-secondary">Close</button>
-          <button
-            onClick={handleSubmitForReview}
-            disabled={submitting}
-            className="btn btn-success font-bold"
-            style={{ padding: '0.7rem 1.5rem' }}
-          >
-            <Check size={15} /> Submit for Review
-          </button>
+        <div className="modal-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+          {confirmSubmit && (
+            <div className="flex items-center gap-2 px-1 pb-1" style={{ color: 'var(--accent-coral)' }}>
+              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+              <span className="text-xs font-semibold">
+                This will send the profile to admin for review. You won't be able to make changes after.
+              </span>
+            </div>
+          )}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setConfirmSubmit(false); onClose(); }}
+              className="btn btn-secondary"
+            >
+              {confirmSubmit ? 'Cancel' : 'Close'}
+            </button>
+            <button
+              onClick={handleSubmitForReview}
+              disabled={submitting}
+              className="btn font-bold transition-all duration-200"
+              style={confirmSubmit ? {
+                background: 'var(--accent-coral)',
+                color: '#fff',
+                padding: '0.7rem 1.5rem',
+                borderColor: 'transparent',
+                boxShadow: '0 0 16px rgba(239,68,68,0.35)',
+              } : {
+                background: '#10b981',
+                color: '#fff',
+                padding: '0.7rem 1.5rem',
+                borderColor: 'transparent',
+              }}
+            >
+              {confirmSubmit
+                ? <><AlertTriangle size={15} /> Yes, Submit for Review</>  
+                : <><Check size={15} /> Submit for Review</>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>
