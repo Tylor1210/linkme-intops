@@ -32,9 +32,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-2',
-    title: 'Configure SEO Meta Tags',
+    title: 'Verify Custom Domain DNS',
     profileUrl: 'https://linkme.to/creator-seo-demo',
-    description: 'Implement correct OpenGraph and Twitter card configurations for all user portfolio links. Ensure proper canonical URLs and structured data markup for search indexing.',
+    description: 'Configure the custom subdomain routing for the creator profile and verify SSL provisioning is active. Ensure proper canonical mapping is configured.',
     stage: 'unclaimed',
     routingType: 'specific',
     assignedCreatorId: 'creator-a',
@@ -69,9 +69,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- IN PROGRESS ---
   {
     id: 'ticket-3',
-    title: 'Web3 Wallet Integration',
+    title: 'Add Verified Badge to Profile',
     profileUrl: 'https://linkme.to/jordan-web3',
-    description: 'Add support for Phantom and Metamask wallet logins on creator profiles so they can showcase NFTs in their galleries. Use WalletConnect SDK for universal compatibility.',
+    description: 'Add the premium verified badge checkmark icon to the creator name field on the live profile header page. Verify layout alignment across desktop and mobile.',
     stage: 'in_progress',
     routingType: 'specific',
     assignedCreatorId: 'creator-b',
@@ -88,9 +88,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- IN REVIEW ---
   {
     id: 'ticket-4',
-    title: 'Dark Mode Theme Switcher',
+    title: 'Update Biography Text & Social Icons',
     profileUrl: 'https://linkme.to/taylor-darkmode',
-    description: 'Build a fully fluid Dark Mode / Light Mode theme selector following the premium dark slate/glow brand style rules. Use CSS custom properties for instant switching without flash.',
+    description: 'Replace the old description block with the new creator biography details. Add links to YouTube, TikTok, and Instagram with high-res brand icons.',
     stage: 'in_review',
     routingType: 'all',
     assignedCreatorId: 'creator-c',
@@ -107,9 +107,9 @@ const SEED_TICKETS: Ticket[] = [
   // --- COMPLETED / APPROVED (for Stats + Completed Pool) ---
   {
     id: 'ticket-done-1',
-    title: 'Linter & TypeScript Config Setup',
+    title: 'Update Creator Highlight Covers',
     profileUrl: 'https://linkme.to/alex-devenv',
-    description: 'Add oxlint and typescript rules to project configurations to enforce verbatimModuleSyntax compilation rules and code quality standards.',
+    description: 'Upload the 4 new customized highlight grid cover assets to the user profile grid. Align background overlays with premium brand aesthetics.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-a',
@@ -125,9 +125,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-2',
-    title: 'Support Feedback Widget',
+    title: 'Embed Custom Spotify Playlist',
     profileUrl: 'https://linkme.to/jordan-feedback',
-    description: 'A floating feedback widget for dashboard profiles. Uses a compact slide-up tray with rating stars and freeform text. Should persist via localStorage.',
+    description: 'Integrate the Spotify iFrame playlist widget into the music section of the creator landing page. Set theme colors to match the warm sunset brand gradient.',
     stage: 'approved',
     routingType: 'specific',
     assignedCreatorId: 'creator-b',
@@ -143,9 +143,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-3',
-    title: 'Brand Assets & Icons Refresh',
+    title: 'Add Custom Bio Banner Image',
     profileUrl: 'https://linkme.to/taylor-assets',
-    description: 'Update the main navigation logo with the Linkme premium SVG emblem, update favicon configurations, and align all icon sets to the new 24px grid system.',
+    description: 'Upload and optimize the high-resolution profile cover image. Verify responsive crop sizing and alignment on retina mobile screens.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-c',
@@ -161,9 +161,9 @@ const SEED_TICKETS: Ticket[] = [
   },
   {
     id: 'ticket-done-4',
-    title: 'Local Storage Infrastructure',
+    title: 'Fix Broken Redirect Links',
     profileUrl: 'https://linkme.to/alex-infrastructure',
-    description: 'Set up simulated client db layers in React context to bootstrap testing workflows. Seed initial data with realistic timestamps for all stages.',
+    description: 'Audit and update all external call-to-action buttons. Replace broken target redirect slugs with active merchant store page links.',
     stage: 'approved',
     routingType: 'all',
     assignedCreatorId: 'creator-a',
@@ -188,17 +188,17 @@ const SEED_TIMER_LOGS: TimerLog[] = [
 const SEED_COMMENTS: Comment[] = [
   {
     id: 'comment-1', ticketId: 'ticket-3', userId: 'creator-b', userName: 'Jordan Lee',
-    userRole: 'creator', content: 'Claimed this ticket. Starting with WalletConnect SDK setup.',
+    userRole: 'creator', content: 'Claimed this profile. Starting with bio cover setup.',
     createdAt: now - hour * 2, type: 'system', parentCommentId: null,
   },
   {
     id: 'comment-2', ticketId: 'ticket-4', userId: 'creator-c', userName: 'Taylor Kim',
-    userRole: 'creator', content: 'Created layout files, added theme context provider, and hooked up CSS variables. Check the glowing shadows on cards.',
+    userRole: 'creator', content: 'Updated biography text, verified font family shifts on mobile headers.',
     createdAt: now - hour * 1, type: 'regular', parentCommentId: null,
   },
   {
     id: 'comment-3', ticketId: 'ticket-4', userId: 'system', userName: 'System',
-    userRole: 'admin', content: 'Ticket submitted for review by Taylor Kim.',
+    userRole: 'admin', content: 'Profile submitted for review by Taylor Kim.',
     createdAt: now - hour * 1, type: 'system', parentCommentId: null,
   },
 ];

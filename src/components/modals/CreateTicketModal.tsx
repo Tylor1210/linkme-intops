@@ -18,6 +18,28 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
   const creators = MOCK_USERS.filter(u => u.role === 'creator');
 
+  const handleUrlChange = (val: string) => {
+    setProfileUrl(val);
+    
+    // Automatically extract slug if title is currently empty
+    if (!title.trim() && val.trim()) {
+      const cleanUrl = val.endsWith('/') ? val.slice(0, -1) : val;
+      const parts = cleanUrl.split('/');
+      const lastSegment = parts[parts.length - 1];
+      if (lastSegment && !lastSegment.includes('.') && lastSegment.length > 1) {
+        // Format e.g., "alex-rivera" -> "Alex Rivera"
+        const formatted = lastSegment
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+          .split('_')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        setTitle(formatted);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
@@ -80,7 +102,7 @@ export const CreateTicketModal: React.FC<Props> = ({ onClose, onCreated }) => {
                 className="form-input"
                 placeholder="https://linkme.to/profile-slug"
                 value={profileUrl}
-                onChange={e => setProfileUrl(e.target.value)}
+                onChange={e => handleUrlChange(e.target.value)}
                 type="url"
               />
             </div>

@@ -86,7 +86,7 @@ export const TicketDetailsModal: React.FC<Props> = ({ ticketId, currentUser, onC
         <div className="modal-header flex-shrink-0">
           <div className="flex flex-col gap-1 min-w-0 flex-1 mr-3">
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-              <span>Ticket</span><ChevronRight size={11} /><span className="font-mono">{ticket.id}</span>
+              <span>Profile</span><ChevronRight size={11} /><span className="font-mono">{ticket.id}</span>
             </div>
             <h3 className="text-lg font-display font-bold flex items-center gap-2 truncate" style={{ color: 'var(--text-primary)' }}>
               {ticket.title}

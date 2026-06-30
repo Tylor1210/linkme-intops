@@ -55,7 +55,7 @@ export const ReclaimInProgressModal: React.FC<Props> = ({
             <div>
               <h3 className="font-display font-bold" style={{ color: 'var(--text-primary)' }}>Admin Reclaim</h3>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Pull this ticket back into the Unclaimed queue
+                Pull this profile back into the Unclaimed queue
               </p>
             </div>
           </div>
@@ -67,7 +67,7 @@ export const ReclaimInProgressModal: React.FC<Props> = ({
         <form onSubmit={handleSubmit}>
           <div className="modal-body flex flex-col gap-4">
 
-            {/* Ticket info strip */}
+            {/* Profile info strip */}
             <div className="p-3 rounded-xl border text-sm" style={{ borderColor: 'rgba(255,138,0,0.2)', background: 'rgba(255,138,0,0.04)' }}>
               <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{ticket.title}</p>
               {currentCreator && (

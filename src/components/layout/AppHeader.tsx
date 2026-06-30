@@ -20,8 +20,6 @@ export const AppHeader: React.FC<Props> = ({
   theme,
   onThemeToggle,
 }) => {
-  const isAdmin = currentUser.role === 'admin';
-
   return (
     <header className="app-header">
       {/* Top Row: Brand + Mobile Switchers */}
@@ -65,14 +63,12 @@ export const AppHeader: React.FC<Props> = ({
         >
           <Layout size={13} /> Pipeline
         </button>
-        {isAdmin && (
-          <button
-            onClick={() => onTabChange('stats')}
-            className={`tab-btn flex items-center justify-center gap-1.5 flex-1 md:flex-initial ${activeTab === 'stats' ? 'active' : ''}`}
-          >
-            <BarChart3 size={13} /> Analytics
-          </button>
-        )}
+        <button
+          onClick={() => onTabChange('stats')}
+          className={`tab-btn flex items-center justify-center gap-1.5 flex-1 md:flex-initial ${activeTab === 'stats' ? 'active' : ''}`}
+        >
+          <BarChart3 size={13} /> Analytics
+        </button>
       </nav>
 
       {/* Right Row: Desktop Switchers ONLY */}

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { type Ticket, MOCK_USERS } from '../../db/schema';
+import { type Ticket, type User, MOCK_USERS } from '../../db/schema';
 import { BarChart3, Calendar, CheckCircle2, Clock, TrendingUp, Users } from 'lucide-react';
 
 type FilterType = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 interface Props {
   tickets: Ticket[];
+  currentUser: User;
 }
 
 const fmtDuration = (ms: number) => {
@@ -32,10 +33,24 @@ const getRange = (filter: FilterType, customStart: string, customEnd: string): [
   }
 };
 
-export const StatsTab: React.FC<Props> = ({ tickets }) => {
+export const StatsTab: React.FC<Props> = ({ tickets, currentUser }) => {
   const [filter, setFilter] = useState<FilterType>('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [selectedCreatorId, setSelectedCreatorId] = useState<string>('all');
+
+  const isAdmin = currentUser.role === 'admin';
+
+  // Creators only see their own stats; Admins can filter by specific creator or "all"
+  const filteredTickets = useMemo(() => {
+    if (currentUser.role === 'creator') {
+      return tickets.filter(t => t.assignedCreatorId === currentUser.id);
+    }
+    if (selectedCreatorId !== 'all') {
+      return tickets.filter(t => t.assignedCreatorId === selectedCreatorId);
+    }
+    return tickets;
+  }, [tickets, currentUser, selectedCreatorId]);
 
   const [rangeStart, rangeEnd] = useMemo(
     () => getRange(filter, customStart, customEnd),
@@ -45,13 +60,13 @@ export const StatsTab: React.FC<Props> = ({ tickets }) => {
   const inRange = (ts: number | null) => ts !== null && ts >= rangeStart && ts <= rangeEnd;
 
   const completedInRange = useMemo(
-    () => tickets.filter(t => t.stage === 'approved' && inRange(t.approvedAt)),
-    [tickets, rangeStart, rangeEnd]
+    () => filteredTickets.filter(t => t.stage === 'approved' && inRange(t.approvedAt)),
+    [filteredTickets, rangeStart, rangeEnd]
   );
 
   const claimedInRange = useMemo(
-    () => tickets.filter(t => inRange(t.claimedAt)),
-    [tickets, rangeStart, rangeEnd]
+    () => filteredTickets.filter(t => inRange(t.claimedAt)),
+    [filteredTickets, rangeStart, rangeEnd]
   );
 
   const avgDuration = useMemo(() => {
@@ -77,25 +92,46 @@ export const StatsTab: React.FC<Props> = ({ tickets }) => {
         </div>
         <div>
           <h2 className="font-display font-bold text-xl" style={{ color: 'var(--text-primary)' }}>Analytics Dashboard</h2>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Admin-only · Performance metrics</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {isAdmin ? 'Admin Performance Control' : `Personal Performance · ${currentUser.name}`}
+          </p>
         </div>
       </div>
 
-      {/* Date Filters */}
+      {/* Date & Creator Filters */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`tab-btn ${filter === f.key ? 'active' : ''}`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`tab-btn ${filter === f.key ? 'active' : ''}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Creator:</span>
+              <select
+                value={selectedCreatorId}
+                onChange={e => setSelectedCreatorId(e.target.value)}
+                className="form-select text-xs py-1 px-3 rounded-lg"
+                style={{ width: 'auto', padding: '0.4rem 2rem 0.4rem 1rem', background: 'rgba(120, 120, 120, 0.04)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              >
+                <option value="all">All Creators</option>
+                {MOCK_USERS.filter(u => u.role === 'creator').map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         {filter === 'custom' && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+          <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-color)', background: 'rgba(120, 120, 120, 0.02)' }}>
             <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
             <div className="flex items-center gap-2">
               <label className="text-xs" style={{ color: 'var(--text-muted)' }}>From:</label>

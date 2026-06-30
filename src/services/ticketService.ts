@@ -76,7 +76,7 @@ export const ticketService = {
       ? (MOCK_USERS.find(u => u.id === assignedCreatorId)?.name || 'Specific Creator')
       : 'Public Pool';
     this.addSystemComment(newTicket.id,
-      `Ticket created [${isHighPriority ? 'HIGH PRIORITY' : 'Normal'}]. Routed to: ${dest}.`);
+      `Profile request created [${isHighPriority ? 'HIGH PRIORITY' : 'Normal'}]. Routed to: ${dest}.`);
 
     return newTicket;
   },

@@ -112,8 +112,8 @@ export const TwoLayerDashboard: React.FC<Props> = ({ currentUser, activeTab }) =
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  if (activeTab === 'stats' && isAdmin) {
-    return <StatsTab tickets={tickets} />;
+  if (activeTab === 'stats') {
+    return <StatsTab tickets={tickets} currentUser={currentUser} />;
   }
 
   return (

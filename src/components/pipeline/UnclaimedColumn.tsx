@@ -28,7 +28,7 @@ export const UnclaimedColumn: React.FC<Props> = ({
         <div className="high-priority-banner">
           <AlertTriangle size={13} style={{ color: 'var(--accent-coral)', flexShrink: 0 }} />
           <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--accent-coral)' }}>
-            HIGH PRIORITY TICKET IS ACTIVE!
+            HIGH PRIORITY PROFILE IS ACTIVE!
           </span>
         </div>
       )}

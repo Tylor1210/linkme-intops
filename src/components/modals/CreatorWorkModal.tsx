@@ -102,7 +102,7 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
             ) : (
               <div className="flex items-center gap-3 p-4 rounded-2xl text-sm"
                 style={{ background: 'rgba(120,120,120,0.03)', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                <Link2 size={16} /> No profile URL was added to this ticket.
+                <Link2 size={16} /> No profile URL was added to this profile.
               </div>
             )}
           </div>
@@ -131,7 +131,7 @@ export const CreatorWorkModal: React.FC<Props> = ({ ticket, currentUser, onClose
               <div className="flex items-center gap-3 p-4 rounded-2xl text-sm"
                 style={{ background: 'rgba(120, 120, 120, 0.02)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                 <MessageSquare size={15} style={{ opacity: 0.4 }} />
-                No admin notes on this ticket. Work from the profile link above.
+                No admin notes on this profile. Work from the profile link above.
               </div>
             ) : (
               <div className="flex flex-col gap-2.5">
