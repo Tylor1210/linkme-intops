@@ -1,10 +1,8 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "linkme-intops"
+pages_build_output_dir = "dist"
 compatibility_date = "2026-06-30"
 
-# Configuration for Cloudflare Pages
-# Note: Cloudflare Pages projects do not use the [site] block (which is deprecated).
-
 [vars]
-NODE_VERSION = "20"
+NODE_VERSION = "22"
 VITE_APP_ENV = "production"
