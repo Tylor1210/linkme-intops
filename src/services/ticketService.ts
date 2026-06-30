@@ -1,0 +1,418 @@
+import { dbService } from './dbService';
+import {
+  type Ticket, type TimerLog, type Comment,
+  MOCK_USERS, type RoutingType, type RejectionRoutingOption,
+} from '../db/schema';
+
+const uuid = () =>
+  Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 9);
+
+export const ticketService = {
+  // ─── READ ────────────────────────────────────────────────────────────────────
+
+  getTickets(): Ticket[] {
+    return dbService.getTickets();
+  },
+
+  getCommentsForTicket(ticketId: string): Comment[] {
+    return dbService.getComments().filter(c => c.ticketId === ticketId);
+  },
+
+  getTimerLogsForTicket(ticketId: string): TimerLog[] {
+    return dbService.getTimerLogs().filter(l => l.ticketId === ticketId);
+  },
+
+  /** Priority-sorted queue for a specific creator (stack order) */
+  getCreatorQueue(creatorId: string): Ticket[] {
+    const unclaimed = dbService.getTickets().filter(t => {
+      if (t.stage !== 'unclaimed') return false;
+      return t.routingType === 'all' || t.assignedCreatorId === creatorId;
+    });
+
+    return unclaimed.sort((a, b) => {
+      const score = (t: Ticket) => {
+        if (t.isHighPriority) return t.assignedCreatorId === creatorId ? 1 : 2;
+        return t.assignedCreatorId === creatorId ? 3 : 4;
+      };
+      const diff = score(a) - score(b);
+      return diff !== 0 ? diff : a.createdAt - b.createdAt; // FIFO tiebreak
+    });
+  },
+
+  // ─── CREATE ──────────────────────────────────────────────────────────────────
+
+  createTicket(
+    title: string,
+    profileUrl: string | null,
+    description: string,
+    routingType: RoutingType,
+    assignedCreatorId: string | null,
+    isHighPriority = false,
+  ): Ticket {
+    const tickets = dbService.getTickets();
+    const now = Date.now();
+    const newTicket: Ticket = {
+      id: `ticket-${uuid()}`,
+      title,
+      profileUrl,
+      description,
+      stage: 'unclaimed',
+      routingType,
+      assignedCreatorId: routingType === 'specific' ? assignedCreatorId : null,
+      lastCreatorId: null,
+      currentStageStartedAt: now,
+      totalInProgressTime: 0,
+      createdAt: now,
+      updatedAt: now,
+      isHighPriority,
+      claimedAt: null,
+      approvedAt: null,
+      submittedAt: null,
+    };
+    tickets.push(newTicket);
+    dbService.saveTickets(tickets);
+
+    const dest = routingType === 'specific'
+      ? (MOCK_USERS.find(u => u.id === assignedCreatorId)?.name || 'Specific Creator')
+      : 'Public Pool';
+    this.addSystemComment(newTicket.id,
+      `Ticket created [${isHighPriority ? 'HIGH PRIORITY' : 'Normal'}]. Routed to: ${dest}.`);
+
+    return newTicket;
+  },
+
+  // ─── CLAIM ───────────────────────────────────────────────────────────────────
+
+  claimTicket(ticketId: string, creatorId: string): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'unclaimed') throw new Error('Ticket is not in the unclaimed pool');
+    if (ticket.routingType === 'specific' && ticket.assignedCreatorId !== creatorId)
+      throw new Error('This ticket is routed to a different creator');
+
+    const now = Date.now();
+    ticket.stage = 'in_progress';
+    ticket.assignedCreatorId = creatorId;
+    ticket.lastCreatorId = creatorId;         // Track for Minor Tweak
+    ticket.currentStageStartedAt = now;
+    ticket.updatedAt = now;
+    if (ticket.claimedAt === null) ticket.claimedAt = now;
+
+    // Start timer log
+    const logs = dbService.getTimerLogs();
+    logs.push({ id: `log-${uuid()}`, ticketId, creatorId, startedAt: now, endedAt: null });
+    dbService.saveTimerLogs(logs);
+    dbService.saveTickets(tickets);
+
+    const name = MOCK_USERS.find(u => u.id === creatorId)?.name || 'Creator';
+    this.addSystemComment(ticketId, `Claimed by ${name}. Active work timer started.`);
+    return ticket;
+  },
+
+  /** Pops the highest-priority unclaimed ticket and claims it */
+  claimTopProfile(creatorId: string): Ticket {
+    const queue = this.getCreatorQueue(creatorId);
+    if (queue.length === 0) throw new Error('No tickets available in your queue');
+    return this.claimTicket(queue[0].id, creatorId);
+  },
+
+  // ─── ADMIN RECLAIM (In Progress → Unclaimed) ─────────────────────────────
+
+  /**
+   * Admin pulls an in-progress ticket back into the Unclaimed Pool.
+   * Stops the active timer and re-queues with existing FIFO priority rules.
+   * Optional high-priority flag lets it jump the queue immediately.
+   */
+  adminReclaimInProgress(
+    ticketId: string,
+    adminId: string,
+    routingType: RoutingType,
+    targetCreatorId: string | null = null,
+    isHighPriority?: boolean,
+  ): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'in_progress') throw new Error('Ticket is not in progress');
+
+    const now = Date.now();
+
+    // Stop active timer log so work time is preserved accurately
+    const logs = dbService.getTimerLogs();
+    const activeIdx = logs.findIndex(l => l.ticketId === ticketId && l.endedAt === null);
+    if (activeIdx !== -1) {
+      logs[activeIdx].endedAt = now;
+      ticket.totalInProgressTime += now - logs[activeIdx].startedAt;
+      dbService.saveTimerLogs(logs);
+    }
+
+    // Re-queue the ticket
+    ticket.stage = 'unclaimed';
+    ticket.routingType = routingType;
+    ticket.assignedCreatorId = routingType === 'specific' ? targetCreatorId : null;
+    ticket.currentStageStartedAt = now;
+    ticket.updatedAt = now;
+
+    // Override priority only if explicitly provided
+    if (isHighPriority !== undefined) {
+      ticket.isHighPriority = isHighPriority;
+    }
+
+    dbService.saveTickets(tickets);
+
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+    const dest = routingType === 'specific'
+      ? (MOCK_USERS.find(u => u.id === targetCreatorId)?.name || 'Creator')
+      : 'Public Pool';
+    this.addSystemComment(ticketId,
+      `Admin reclaim by ${adminName}. Returned to Unclaimed → ${dest}. Timer stopped.`);
+
+    return ticket;
+  },
+
+  // ─── SUBMIT ──────────────────────────────────────────────────────────────────
+
+  submitTicketForReview(ticketId: string): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'in_progress') throw new Error('Ticket is not in progress');
+
+    const now = Date.now();
+    // Stop active timer
+    const logs = dbService.getTimerLogs();
+    const activeIdx = logs.findIndex(l => l.ticketId === ticketId && l.endedAt === null);
+    if (activeIdx !== -1) {
+      logs[activeIdx].endedAt = now;
+      ticket.totalInProgressTime += now - logs[activeIdx].startedAt;
+      dbService.saveTimerLogs(logs);
+    }
+
+    ticket.stage = 'in_review';
+    ticket.currentStageStartedAt = now;
+    ticket.submittedAt = now;
+    ticket.updatedAt = now;
+    dbService.saveTickets(tickets);
+
+    const name = MOCK_USERS.find(u => u.id === ticket.assignedCreatorId)?.name || 'Creator';
+    this.addSystemComment(ticketId, `Submitted for Admin review by ${name}. Timer stopped.`);
+    return ticket;
+  },
+
+  // ─── APPROVE ─────────────────────────────────────────────────────────────────
+
+  approveTicket(ticketId: string, adminId: string): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'in_review') throw new Error('Ticket is not in review');
+
+    const now = Date.now();
+    ticket.stage = 'approved';
+    ticket.currentStageStartedAt = now;
+    ticket.approvedAt = now;
+    ticket.updatedAt = now;
+    dbService.saveTickets(tickets);
+
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+    this.addSystemComment(ticketId, `Approved by ${adminName}. Moved to Completed Pool.`);
+    return ticket;
+  },
+
+  // ─── REJECT ──────────────────────────────────────────────────────────────────
+
+  rejectTicket(
+    ticketId: string,
+    adminId: string,
+    commentText: string,
+    routingOption: RejectionRoutingOption,
+    newCreatorId?: string,
+    isHighPriority = false,
+  ): Ticket {
+    if (!commentText.trim()) throw new Error('A rejection reason comment is required');
+
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'in_review') throw new Error('Ticket is not in review');
+
+    const now = Date.now();
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+
+    ticket.isHighPriority = isHighPriority;
+
+    // Save forced rejection comment
+    const comments = dbService.getComments();
+    comments.push({
+      id: `comment-${uuid()}`,
+      ticketId, userId: adminId, userName: adminName, userRole: 'admin',
+      content: commentText, createdAt: now, type: 'rejection', parentCommentId: null,
+    });
+    dbService.saveComments(comments);
+
+    if (routingOption === 'same_creator') {
+      const origCreatorId = ticket.assignedCreatorId!;
+      ticket.stage = 'in_progress';
+      ticket.currentStageStartedAt = now;
+      const logs = dbService.getTimerLogs();
+      logs.push({ id: `log-${uuid()}`, ticketId, creatorId: origCreatorId, startedAt: now, endedAt: null });
+      dbService.saveTimerLogs(logs);
+      const origName = MOCK_USERS.find(u => u.id === origCreatorId)?.name || 'Creator';
+      this.addSystemComment(ticketId, `Rejected by ${adminName}. Returned to ${origName} — timer resumed.`);
+    } else if (routingOption === 'different_creator') {
+      if (!newCreatorId) throw new Error('Must designate a creator for re-routing');
+      ticket.stage = 'unclaimed';
+      ticket.routingType = 'specific';
+      ticket.assignedCreatorId = newCreatorId;
+      ticket.currentStageStartedAt = now;
+      const newName = MOCK_USERS.find(u => u.id === newCreatorId)?.name || 'Creator';
+      this.addSystemComment(ticketId, `Rejected by ${adminName}. Re-routed to ${newName}.`);
+    } else {
+      ticket.stage = 'unclaimed';
+      ticket.routingType = 'all';
+      ticket.assignedCreatorId = null;
+      ticket.currentStageStartedAt = now;
+      this.addSystemComment(ticketId, `Rejected by ${adminName}. Returned to Public Pool.`);
+    }
+
+    ticket.updatedAt = now;
+    dbService.saveTickets(tickets);
+    return ticket;
+  },
+
+  // ─── RECALL: MINOR TWEAK ─────────────────────────────────────────────────────
+
+  /**
+   * Minor Tweak: Sends an approved ticket back to In Progress,
+   * automatically assigned to the last creator who worked on it.
+   */
+  recallMinorTweak(ticketId: string, adminId: string): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'approved') throw new Error('Ticket is not in the Completed Pool');
+
+    const creatorId = ticket.lastCreatorId || ticket.assignedCreatorId;
+    if (!creatorId) throw new Error('Cannot determine the last creator for this ticket');
+
+    const now = Date.now();
+    ticket.stage = 'in_progress';
+    ticket.assignedCreatorId = creatorId;
+    ticket.currentStageStartedAt = now;
+    ticket.approvedAt = null;
+    ticket.submittedAt = null;
+    ticket.updatedAt = now;
+
+    // Start new timer
+    const logs = dbService.getTimerLogs();
+    logs.push({ id: `log-${uuid()}`, ticketId, creatorId, startedAt: now, endedAt: null });
+    dbService.saveTimerLogs(logs);
+    dbService.saveTickets(tickets);
+
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+    const creatorName = MOCK_USERS.find(u => u.id === creatorId)?.name || 'Creator';
+    this.addSystemComment(ticketId,
+      `Minor Tweak recall by ${adminName}. Sent back to ${creatorName} in In Progress.`);
+    return ticket;
+  },
+
+  // ─── RECALL: MAJOR TWEAK ─────────────────────────────────────────────────────
+
+  /**
+   * Major Tweak: Fully resets an approved ticket to Unclaimed with routing choices.
+   */
+  recallMajorTweak(
+    ticketId: string,
+    adminId: string,
+    routingType: RoutingType,
+    targetCreatorId: string | null,
+    isHighPriority = false,
+  ): Ticket {
+    const tickets = dbService.getTickets();
+    const idx = tickets.findIndex(t => t.id === ticketId);
+    if (idx === -1) throw new Error('Ticket not found');
+
+    const ticket = tickets[idx];
+    if (ticket.stage !== 'approved') throw new Error('Ticket is not in the Completed Pool');
+
+    const now = Date.now();
+    ticket.stage = 'unclaimed';
+    ticket.routingType = routingType;
+    ticket.assignedCreatorId = routingType === 'specific' ? targetCreatorId : null;
+    ticket.currentStageStartedAt = now;
+    ticket.approvedAt = null;
+    ticket.submittedAt = null;
+    ticket.claimedAt = null;
+    ticket.isHighPriority = isHighPriority;
+    ticket.updatedAt = now;
+    dbService.saveTickets(tickets);
+
+    const adminName = MOCK_USERS.find(u => u.id === adminId)?.name || 'Admin';
+    const dest = routingType === 'specific'
+      ? (MOCK_USERS.find(u => u.id === targetCreatorId)?.name || 'Creator')
+      : 'Public Pool';
+    this.addSystemComment(ticketId,
+      `Major Tweak recall by ${adminName}. Fully reset to Unclaimed. Routed to: ${dest}.`);
+    return ticket;
+  },
+
+  // ─── COMMENTS ────────────────────────────────────────────────────────────────
+
+  addUserComment(ticketId: string, userId: string, content: string, parentCommentId: string | null = null): Comment {
+    const user = MOCK_USERS.find(u => u.id === userId);
+    if (!user) throw new Error('User not found');
+    const comment: Comment = {
+      id: `comment-${uuid()}`,
+      ticketId, userId, userName: user.name, userRole: user.role,
+      content, createdAt: Date.now(), type: 'regular', parentCommentId,
+    };
+    const comments = dbService.getComments();
+    comments.push(comment);
+    dbService.saveComments(comments);
+    return comment;
+  },
+
+  addSystemComment(ticketId: string, content: string): Comment {
+    const comment: Comment = {
+      id: `comment-${uuid()}`,
+      ticketId, userId: 'system', userName: 'System', userRole: 'admin',
+      content, createdAt: Date.now(), type: 'system', parentCommentId: null,
+    };
+    const comments = dbService.getComments();
+    comments.push(comment);
+    dbService.saveComments(comments);
+    return comment;
+  },
+
+  // ─── LIVE TIMER CALCULATION ──────────────────────────────────────────────────
+
+  calculateLiveTime(ticket: Ticket): { timeInStage: number; totalInProgressTime: number } {
+    const now = Date.now();
+    const timeInStage = now - ticket.currentStageStartedAt;
+    if (ticket.stage === 'in_progress') {
+      const activeLog = dbService.getTimerLogs().find(
+        l => l.ticketId === ticket.id && l.endedAt === null
+      );
+      if (activeLog) {
+        return {
+          timeInStage,
+          totalInProgressTime: ticket.totalInProgressTime + (now - activeLog.startedAt),
+        };
+      }
+    }
+    return { timeInStage, totalInProgressTime: ticket.totalInProgressTime };
+  },
+};

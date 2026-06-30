@@ -1,0 +1,16 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "linkme-profile-ops"
+compatibility_date = "2026-06-30"
+
+# Production Pages configuration
+[site]
+bucket = "./dist"
+
+[vars]
+# Add environment variables here if needed
+NODE_VERSION = "20"
+VITE_APP_ENV = "production"
+
+# Single Page App (SPA) redirect configuration
+# Cloudflare Pages handles this automatically with a _redirects file,
+# but we can declare basic parameters here or in public/_redirects.

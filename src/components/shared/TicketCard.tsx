@@ -1,0 +1,87 @@
+import React from 'react';
+import { type Ticket, type User, MOCK_USERS } from '../../db/schema';
+import { AlertTriangle, Link2, ExternalLink } from 'lucide-react';
+
+interface Props {
+  ticket: Ticket;
+  currentUser: User;
+  onClick: (id: string) => void;
+  /** Optional extra actions (e.g. Approve/Reject buttons for In Review) */
+  actions?: React.ReactNode;
+}
+
+export const TicketCard: React.FC<Props> = ({ ticket, currentUser, onClick, actions }) => {
+  const isAdmin = currentUser.role === 'admin';
+  const assignedUser = MOCK_USERS.find(u => u.id === ticket.assignedCreatorId);
+
+  const fmtAge = (ts: number) => {
+    const diff = Date.now() - ts;
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (d > 0) return `${d}d ago`;
+    if (h > 0) return `${h}h ago`;
+    return 'just now';
+  };
+
+  return (
+    <div
+      className="card cursor-pointer group relative"
+      onClick={() => onClick(ticket.id)}
+      style={{ padding: '0.875rem' }}
+    >
+      {/* High priority indicator strip */}
+      {ticket.isHighPriority && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+          style={{ background: 'linear-gradient(90deg, var(--accent-coral), transparent)' }} />
+      )}
+
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {ticket.isHighPriority && (
+            <AlertTriangle size={13} style={{ color: 'var(--accent-coral)', flexShrink: 0 }} />
+          )}
+          <span className="text-sm font-semibold truncate leading-tight" style={{ color: 'var(--text-primary)' }}>{ticket.title}</span>
+        </div>
+        <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{fmtAge(ticket.createdAt)}</span>
+      </div>
+
+      {/* Profile URL */}
+      {ticket.profileUrl && (
+        <div className="flex items-center gap-1.5 mb-2" onClick={e => e.stopPropagation()}>
+          <Link2 size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+          <a
+            href={ticket.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs truncate hover:underline flex items-center gap-1"
+            style={{ color: 'var(--accent-primary)' }}
+          >
+            {ticket.profileUrl.replace('https://', '')}
+            <ExternalLink size={9} />
+          </a>
+        </div>
+      )}
+
+      {/* Description snippet */}
+      <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
+        {ticket.description}
+      </p>
+
+      {/* Footer: assignee + age */}
+      {isAdmin && assignedUser && (
+        <div className="flex items-center gap-1.5">
+          <img src={assignedUser.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{assignedUser.name.split(' ')[0]}</span>
+        </div>
+      )}
+
+      {/* Extra action slot (e.g. Approve/Reject) */}
+      {actions && (
+        <div className="mt-3 pt-2 border-t flex gap-2" style={{ borderColor: 'var(--border-color)' }} onClick={e => e.stopPropagation()}>
+          {actions}
+        </div>
+      )}
+    </div>
+  );
+};
