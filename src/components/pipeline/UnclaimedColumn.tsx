@@ -30,12 +30,19 @@ export const UnclaimedColumn: React.FC<Props> = ({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 750);
   const dragNode = useRef<HTMLDivElement | null>(null);
 
   // Keep localTickets in sync when the parent refreshes (e.g. after escalate)
   React.useEffect(() => {
     setLocalTickets(tickets);
   }, [tickets]);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 750);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     setExpanded(true); // Automatically expand so all items are visible during dragging
@@ -126,60 +133,67 @@ export const UnclaimedColumn: React.FC<Props> = ({
             </div>
           ) : (
             <>
-              {localTickets.map((t, index) => {
-                // If not expanded, hide all items beyond index 3
-                if (!expanded && index >= 4) return null;
-
+              {(() => {
+                const defaultLimit = isMobile ? 1 : 4;
                 return (
-                  <div
-                    key={t.id}
-                    className={`dnd-item ${dragIndex === index ? 'dnd-item--dragging' : ''} ${overIndex === index ? 'dnd-item--over' : ''}`}
-                    draggable
-                    onDragStart={e => handleDragStart(e, index)}
-                    onDragEnter={e => handleDragEnter(e, index)}
-                    onDragOver={handleDragOver}
-                    onDragEnd={handleDragEnd}
-                    onDragLeave={handleDragLeave}
-                  >
-                    {/* Drag handle */}
-                    <div
-                      className="dnd-handle"
-                      title="Drag to reorder"
-                      onMouseDown={e => e.stopPropagation()}
-                    >
-                      <GripVertical size={14} />
-                    </div>
+                  <>
+                    {localTickets.map((t, index) => {
+                      // If not expanded, hide all items beyond the dynamic limit
+                      if (!expanded && index >= defaultLimit) return null;
 
-                    {/* Card with escalate action */}
-                    <div className="dnd-card-wrapper">
-                      <TicketCard
-                        ticket={t}
-                        currentUser={currentUser}
-                        onClick={onTicketClick}
-                        onEscalate={!t.isHighPriority && onEscalate ? onEscalate : undefined}
-                      />
-                    </div>
-                  </div>
+                      return (
+                        <div
+                          key={t.id}
+                          className={`dnd-item ${dragIndex === index ? 'dnd-item--dragging' : ''} ${overIndex === index ? 'dnd-item--over' : ''}`}
+                          draggable
+                          onDragStart={e => handleDragStart(e, index)}
+                          onDragEnter={e => handleDragEnter(e, index)}
+                          onDragOver={handleDragOver}
+                          onDragEnd={handleDragEnd}
+                          onDragLeave={handleDragLeave}
+                        >
+                          {/* Drag handle */}
+                          <div
+                            className="dnd-handle"
+                            title="Drag to reorder"
+                            onMouseDown={e => e.stopPropagation()}
+                          >
+                            <GripVertical size={14} />
+                          </div>
+
+                          {/* Card with escalate action */}
+                          <div className="dnd-card-wrapper">
+                            <TicketCard
+                              ticket={t}
+                              currentUser={currentUser}
+                              onClick={onTicketClick}
+                              onEscalate={!t.isHighPriority && onEscalate ? onEscalate : undefined}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {localTickets.length > defaultLimit && (
+                      <button
+                        onClick={() => setExpanded(prev => !prev)}
+                        className="btn btn-secondary w-full text-xs font-semibold py-2 rounded-xl mt-1 flex items-center justify-center gap-1.5"
+                        style={{
+                          background: 'rgba(120, 120, 120, 0.04)',
+                          borderColor: 'var(--border-color)',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {expanded ? (
+                          <>Show Less</>
+                        ) : (
+                          <>Show {localTickets.length - defaultLimit} More Profiles</>
+                        )}
+                      </button>
+                    )}
+                  </>
                 );
-              })}
-
-              {localTickets.length > 4 && (
-                <button
-                  onClick={() => setExpanded(prev => !prev)}
-                  className="btn btn-secondary w-full text-xs font-semibold py-2 rounded-xl mt-1 flex items-center justify-center gap-1.5"
-                  style={{
-                    background: 'rgba(120, 120, 120, 0.04)',
-                    borderColor: 'var(--border-color)',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  {expanded ? (
-                    <>Show Less</>
-                  ) : (
-                    <>Show {localTickets.length - 4} More Profiles</>
-                  )}
-                </button>
-              )}
+              })()}
             </>
           )}
         </div>
